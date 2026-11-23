@@ -315,7 +315,7 @@ impl TrendsDesk {
                 (crate::x_panel::XSection::Search, "Search"),
                 (crate::x_panel::XSection::Trends, "Trends"),
                 (crate::x_panel::XSection::Compose, "Compose"),
-                (crate::x_panel::XSection::ReplyGuy, "Reply"),
+                (crate::x_panel::XSection::ReplyGuy, "TermyXL"),
                 (crate::x_panel::XSection::Followers, "Follow"),
                 (crate::x_panel::XSection::Queue, "Receipts"),
             ];

@@ -1,4 +1,4 @@
-//! Reply Guy: fresh X posts from Treg (the user's own Treg token) plus
+//! TermyXL: fresh X posts from Treg (the user's own Treg token) plus
 //! Grok-drafted reply options (the user's own xAI key). Drafts only:
 //! posting always goes through the X panel's Confirm screen.
 //!
@@ -182,10 +182,10 @@ pub fn mask(value: &str) -> String {
 pub fn ready(grok: Option<&str>, treg: Option<&str>) -> Result<(), String> {
     match (grok.is_some(), treg.is_some()) {
         (true, true) => Ok(()),
-        (false, true) => Err("Add your Grok (xAI) API key to turn Reply Guy on.".into()),
-        (true, false) => Err("Add your Treg API key to turn Reply Guy on.".into()),
+        (false, true) => Err("Add your Grok (xAI) API key to turn TermyXL on.".into()),
+        (true, false) => Err("Add your Treg API key to turn TermyXL on.".into()),
         (false, false) => {
-            Err("Reply Guy is off. Add your Treg and Grok (xAI) keys to turn it on.".into())
+            Err("TermyXL is off. Add your Treg and Grok (xAI) keys to turn it on.".into())
         }
     }
 }

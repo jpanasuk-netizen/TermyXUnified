@@ -35,7 +35,7 @@ const FEATURES: &[Feature] = &[
     Feature {
         id: "home-pages",
         state: FeatureState::InThisBuild,
-        note: "For you and Following ask for 100 unique posts via the live session. A miss shows the error. Test posts are not a fallback. Reply Guy Treg stays at 50 with no cursor.",
+        note: "For you and Following ask for 100 unique posts via the live session. A miss shows the error. Test posts are not a fallback. TermyXL Treg stays at 50 with no cursor.",
     },
     Feature {
         id: "follow",

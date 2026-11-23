@@ -1,4 +1,4 @@
-//! Multi-source Treg fetch + quote-to-X helpers for Reply Guy.
+//! Multi-source Treg fetch + quote-to-X helpers for TermyXL.
 //! Tool ids are catalog call-by-id only (see notes/treg-multi-source-tools.md).
 
 use crate::io::Http;
@@ -7,7 +7,7 @@ use crate::reply_guy::{
     Sort, TREG_BASE, TREG_SEARCH_COST_USD, fetch_posts, fetch_trends, treg_request,
 };
 
-/// Catalog tool ids Reply Guy calls by id.
+/// Catalog tool ids TermyXL calls by id.
 pub const TOOL_REDDIT_SEARCH: &str = "anyapi.reddit.search";
 pub const TOOL_REDDIT_TRENDING: &str = "anyapi.reddit.trending_posts";
 pub const TOOL_TIKTOK_SEARCH: &str = "anyapi.tiktok.search.videos";
@@ -20,7 +20,7 @@ pub const TOOL_FACEBOOK_SEARCH: &str = "anyapi.facebook.search_posts";
 
 pub const TREG_COST_VARIES: &str = "varies";
 
-/// Platform a Reply Guy hit came from.
+/// Platform a TermyXL hit came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     X,

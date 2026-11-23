@@ -174,13 +174,13 @@ const INVENTORY: &[FieldRecord] = &[
     },
     FieldRecord {
         id: "x.reply-guy-topic",
-        surface: "Reply Guy topic",
+        surface: "TermyXL topic",
         kind: FieldKind::DraftEditor,
         notes: "Single line. Enter fetches. Double-click selects all.",
     },
     FieldRecord {
         id: "x.reply-guy-key",
-        surface: "Reply Guy Treg/Grok key",
+        surface: "TermyXL Treg/Grok key",
         kind: FieldKind::MaskedCaret,
         notes: "Bullets scroll inside the fixed field so a long key cannot push Save off screen. Enter and paste still save. The secret is not logged.",
     },

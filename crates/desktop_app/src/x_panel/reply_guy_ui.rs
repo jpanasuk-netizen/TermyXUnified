@@ -1,4 +1,4 @@
-//! Reply Guy tab: Treg finds fresh posts for a topic, Grok drafts reply
+//! TermyXL tab: Treg finds fresh posts for a topic, Grok drafts reply
 //! options, the user picks/edits, and Reply opens the normal Confirm
 //! screen (OpenCLI post path). Nothing here posts, likes, or follows.
 
@@ -146,7 +146,7 @@ impl RgState {
             Ok(())
         } else {
             Err(
-                "Reply Guy is off. Add your Treg API key to turn it on (Grok key is optional)."
+                "TermyXL is off. Add your Treg API key to turn it on (Grok key is optional)."
                     .into(),
             )
         }
@@ -274,7 +274,7 @@ impl XPanel {
         }
         self.desk.rg.busy = true;
         self.desk.rg.error = None;
-        self.status = format!("reply guy \u{b7} multi-source fetch {topic}\u{2026}");
+        self.status = format!("TermyXL \u{b7} multi-source fetch {topic}\u{2026}");
         cx.notify();
         let live = self.live;
         let sort = to_sort(self.list_sort);
@@ -314,7 +314,7 @@ impl XPanel {
                             panel.desk.rg.error = Some(fetched.notes.join(" · "));
                         }
                         panel.status = format!(
-                            "reply guy \u{b7} {} hits \u{b7} {}",
+                            "TermyXL \u{b7} {} hits \u{b7} {}",
                             fetched.hits.len(),
                             panel.desk.rg.cost.clone().unwrap_or_default()
                         );
@@ -341,7 +341,7 @@ impl XPanel {
             return;
         }
         self.desk.rg.busy = true;
-        self.status = "reply guy \u{b7} trends (multi-source)\u{2026}".into();
+        self.status = "TermyXL \u{b7} trends (multi-source)\u{2026}".into();
         cx.notify();
         let live = self.live;
         let config = self.live_config();
@@ -376,7 +376,7 @@ impl XPanel {
                             panel.desk.rg.error = Some(multi.notes.join(" · "));
                         }
                         panel.status = format!(
-                            "reply guy \u{b7} trends \u{b7} {} chips \u{b7} {} hits",
+                            "TermyXL \u{b7} trends \u{b7} {} chips \u{b7} {} hits",
                             panel.desk.rg.trends.len(),
                             panel.desk.rg_hits.len()
                         );
@@ -1001,7 +1001,7 @@ impl XPanel {
         let mut rows = Vec::new();
         let ready = self.desk.rg.ready().is_ok();
         rows.push(hint(format!(
-            "Reply Guy \u{b7} {}",
+            "TermyXL \u{b7} {}",
             if ready { "Ready" } else { "Setup" }
         )));
         rows.push(self.rg_key_row(Secret::Treg, cx));
@@ -1034,7 +1034,7 @@ impl XPanel {
             rows.push(hint(test.clone()));
         }
         if let Err(reason) = self.desk.rg.ready() {
-            rows.push(empty_state("Reply Guy is off", reason));
+            rows.push(empty_state("TermyXL is off", reason));
             return rows;
         }
         rows.push(

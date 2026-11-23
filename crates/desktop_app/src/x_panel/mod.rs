@@ -154,7 +154,7 @@ impl XSection {
             Self::Followers => "Followers",
             Self::Queue => "Queue",
             Self::Analyze => "Analyze",
-            Self::ReplyGuy => "Reply Guy",
+            Self::ReplyGuy => "TermyXL",
         }
     }
 
@@ -2897,7 +2897,7 @@ impl XPanel {
             }
             XSection::ReplyGuy => {
                 self.status =
-                    "reply guy \u{b7} Treg finds posts, Grok drafts \u{b7} Reply opens Confirm"
+                    "TermyXL \u{b7} Treg finds posts, Grok drafts \u{b7} Reply opens Confirm"
                         .into();
                 cx.notify();
             }
@@ -3940,7 +3940,7 @@ impl XPanel {
         )
     }
 
-    /// SelectAll for the active field. Single-line fields (Reply Guy topic
+    /// SelectAll for the active field. Single-line fields (TermyXL topic
     /// included) and the multiline writers select the whole draft. The
     /// masked key field keeps its select-all highlight.
     pub fn select_all_active(&mut self) {
@@ -6149,7 +6149,7 @@ impl Drop for XPanel {
 impl Render for XPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.maybe_spawn_mention_check(cx);
-        // Reply Guy restored at launch: read saved keys once so a stored
+        // TermyXL restored at launch: read saved keys once so a stored
         // Treg key shows as saved instead of prompting again.
         if self.section == XSection::ReplyGuy && !self.desk.rg.checked {
             self.rg_refresh_keys();

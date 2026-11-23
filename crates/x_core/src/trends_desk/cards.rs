@@ -1,4 +1,4 @@
-//! Tweet cards, inline reply state, and Reply Guy take selection.
+//! Tweet cards, inline reply state, and TermyXL take selection.
 //!
 //! Sending is a separate explicit step. Drafting a take never posts.
 //! A failed provider stays an error and does not invent a successful draft.
@@ -846,7 +846,7 @@ fn shorten_reason(error: &str) -> String {
 
 /// Treg reads the existing Termy X key and checks it. It does not write a new
 /// key and it does not fall back to a fake success when the check fails.
-/// The wording is still the free Reply Guy template, labeled as such.
+/// The wording is still the free TermyXL template, labeled as such.
 pub fn treg_take(
     config: &crate::config::XConfig,
     http: &dyn Http,

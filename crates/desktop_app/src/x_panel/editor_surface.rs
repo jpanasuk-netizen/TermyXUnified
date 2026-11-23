@@ -1,5 +1,5 @@
 //! Shaped draft editor for Compose, Reply, Quote, and the shared single-line
-//! fields (Reply Guy topic, search, and the other boxes that use the same
+//! fields (TermyXL topic, search, and the other boxes that use the same
 //! control). Hit testing uses the same shaped glyph positions that are painted,
 //! so a click lands on the visual character, including soft-wrapped rows.
 
@@ -421,7 +421,7 @@ impl XPanel {
                 }
             } else if clicks == 2 {
                 // Single-line fields keep double-click = select all
-                // (Reply Guy topic, search, and the other shared boxes).
+                // (TermyXL topic, search, and the other shared boxes).
                 if single {
                     draft.select_all(text);
                 } else {
