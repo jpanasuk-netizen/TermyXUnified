@@ -215,11 +215,9 @@ impl TerminalView {
                 self.open_x_section(termy::x_panel::XSection::Research, cx);
             }
             CommandAction::OpenTrendsDesk => {
-                if let Err(error) =
-                    termy::trends_desk::open_in(cx, termy::trends_desk::DeskOptions::default())
-                {
-                    log::error!("Termy XL did not open: {error}");
-                }
+                // TermyXL now lives as a docked pane inside the Termy X window
+                // instead of a separate snapped OS window.
+                self.toggle_trends_desk(cx);
             }
             _ if shortcuts_suspended => {}
             CommandAction::OpenConfig

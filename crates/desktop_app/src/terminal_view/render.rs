@@ -4127,6 +4127,8 @@ impl Render for TerminalView {
                                     .children(inspector_panel),
                             )
                             .children(self.x_panel_open.then(|| self.x_panel.clone()).flatten())
+                            .children(self.trends_desk_pane(cx))
+                            .children(self.trends_desk_rail(cx))
                             .children(tab_sidebar),
                     ),
             )

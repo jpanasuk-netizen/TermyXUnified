@@ -99,6 +99,7 @@ mod update_overlay;
 mod update_toasts;
 mod workspaces;
 mod x_host;
+mod trends_host;
 
 pub(crate) use runtime::tmux_runtime_requested;
 
@@ -1583,6 +1584,10 @@ pub struct TerminalView {
     x_panel: Option<gpui_kit::Entity<termy::x_panel::XPanel>>,
     x_panel_open: bool,
     x_ask: x_host::XAskHost,
+    /// TermyXL hosted as a docked pane in this window (not a separate window).
+    trends_desk: Option<gpui_kit::Entity<termy::trends_desk::TrendsDesk>>,
+    trends_desk_open: bool,
+    trends_desk_width: f32,
     debug_overlay_stats: DebugOverlayStats,
     install_cli_available: bool,
     tab_strip: TabStripState,
@@ -2655,7 +2660,7 @@ impl TerminalView {
                 viewport_width,
                 self.effective_sidebar_width(),
                 self.workspace_sidebar_width(),
-                self.x_panel_reserved_width(),
+                self.x_panel_reserved_width() + self.trends_desk_reserved_width(),
             ),
             viewport_height - self.terminal_content_top_inset() - self.inspector_bottom_inset(),
         )
@@ -3576,6 +3581,9 @@ impl TerminalView {
             x_panel: None,
             x_panel_open: false,
             x_ask: Default::default(),
+            trends_desk: None,
+            trends_desk_open: false,
+            trends_desk_width: 687.0,
             debug_overlay_stats: DebugOverlayStats::new(),
             install_cli_available: Self::install_cli_available_from_system(),
             tab_strip: TabStripState::new(config.tab_switch_modifier_hints),

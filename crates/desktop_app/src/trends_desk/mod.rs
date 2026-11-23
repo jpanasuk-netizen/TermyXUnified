@@ -115,6 +115,12 @@ pub struct TrendsDesk {
     pub(crate) anim_target: Option<f32>,
     pub(crate) close_hooked: bool,
     fitted: bool,
+    /// Hosted inside the Termy X main window as a docked pane (not its own
+    /// OS window). When true, render() skips the OS-window follow/fit/close
+    /// hooks and takes its width from `host_width`.
+    pub hosted: bool,
+    /// Pane width supplied by the host while `hosted` (drives column count).
+    pub host_width: f32,
     pub(crate) card_window: usize,
     pub(crate) media: xl_media::MediaDesk,
     pub(crate) take_epoch: u64,
@@ -289,6 +295,8 @@ impl TrendsDesk {
             anim_target: None,
             close_hooked: false,
             fitted: false,
+            hosted: false,
+            host_width: 0.0,
             card_window: 12,
             media: xl_media::MediaDesk::default(),
             take_epoch: 0,
@@ -1338,16 +1346,24 @@ fn set_standalone_app_id() {}
 impl Render for TrendsDesk {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.ensure_started(cx);
-        self.ensure_close_hook(window, cx);
+        if !self.hosted {
+            self.ensure_close_hook(window, cx);
+        }
         self.focus_open_media(window, cx);
         self.ensure_scrolls();
         self.maybe_refresh(cx);
-        self.follow_host(window, cx);
+        if !self.hosted {
+            self.follow_host(window, cx);
+        }
         self.pull_agent_output();
-        if !self.fitted {
+        if !self.hosted && !self.fitted {
             self.fitted = crate::xl_host::fit_window(window);
         }
-        let width: f32 = window.viewport_size().width.into();
+        let width: f32 = if self.hosted && self.host_width > 0.0 {
+            self.host_width
+        } else {
+            window.viewport_size().width.into()
+        };
         let mut root = div()
             .id("trends-desk")
             .track_focus(&self.focus_handle)
