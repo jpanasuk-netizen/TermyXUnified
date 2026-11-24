@@ -285,6 +285,20 @@ impl TrendsDesk {
                 Nav::Draft,
             ))
             .child(nav_button(
+                "desk-nav-map",
+                "Content Map",
+                current == Surface::ContentMap,
+                cx,
+                Nav::ContentMap,
+            ))
+            .child(nav_button(
+                "desk-nav-vault",
+                format!("Viral Vault ({})", self.dk.vault.entries.len()),
+                current == Surface::Vault,
+                cx,
+                Nav::Vault,
+            ))
+            .child(nav_button(
                 "desk-nav-settings",
                 "Settings",
                 current == Surface::Settings,
@@ -540,7 +554,13 @@ impl TrendsDesk {
                             .whitespace_normal()
                             .child(format!("Original · {tweet}")),
                     )
-                    .child(div().text_size(px(14.0)).whitespace_normal().child(shown))
+                    .child(
+                        div()
+                            .text_size(px(14.0))
+                            .whitespace_normal()
+                            .child(shown.clone()),
+                    )
+                    .child(self.draft_loop_row(&id, &shown, cx))
                     .child(
                         div()
                             .text_size(px(12.0))
@@ -795,7 +815,7 @@ impl TrendsDesk {
         cx.notify();
     }
 
-    fn field_chip(
+    pub(crate) fn field_chip(
         &self,
         id: &'static str,
         label: &str,

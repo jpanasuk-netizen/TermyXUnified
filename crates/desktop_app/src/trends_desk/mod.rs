@@ -42,6 +42,9 @@ pub(crate) enum Field {
     CustomBase,
     CustomModel,
     CustomKeyEnv,
+    MapPointA,
+    MapPointB,
+    MapInput,
 }
 
 pub(crate) struct ColumnUi {
@@ -144,6 +147,7 @@ pub struct TrendsDesk {
     pub(crate) more_take: bool,
     pub(crate) draft_busy: HashSet<String>,
     pub(crate) draft_errors: HashMap<String, String>,
+    pub(crate) dk: xl_loop::LoopUi,
 }
 
 #[derive(Clone)]
@@ -227,6 +231,7 @@ impl TrendsDesk {
             config.hermes_model.clone()
         };
         let hermes_key_text = config.hermes_api_key.clone();
+        let dk = xl_loop::LoopUi::load(&data_root, writable);
         Self {
             focus_handle: cx.focus_handle(),
             search_focus: cx.focus_handle(),
@@ -320,6 +325,7 @@ impl TrendsDesk {
             more_take: false,
             draft_busy: HashSet::new(),
             draft_errors: HashMap::new(),
+            dk,
         }
     }
 
@@ -1202,6 +1208,11 @@ impl TrendsDesk {
             self.field = None;
             return;
         }
+        if key == "enter" && self.field == Some(Field::MapInput) {
+            self.map_enter();
+            cx.notify();
+            return;
+        }
         if key == "enter" && self.field == Some(Field::Focus) {
             self.save_settings(cx);
             self.field = None;
@@ -1226,6 +1237,7 @@ impl TrendsDesk {
         } else {
             return;
         }
+        self.after_field_edit(field);
         cx.stop_propagation();
         cx.notify();
     }
@@ -1247,6 +1259,9 @@ impl TrendsDesk {
             Field::CustomBase => &mut self.settings.custom_base,
             Field::CustomModel => &mut self.settings.custom_model,
             Field::CustomKeyEnv => &mut self.settings.custom_key_env,
+            Field::MapPointA => &mut self.dk.map.point_a,
+            Field::MapPointB => &mut self.dk.map.point_b,
+            Field::MapInput => &mut self.dk.input,
         }
     }
 
@@ -1400,6 +1415,8 @@ impl Render for TrendsDesk {
                             Surface::History => self.history_view(cx),
                             Surface::Replies => self.replies_view(cx),
                             Surface::Draft => self.draft_view(cx),
+                            Surface::ContentMap => self.content_map_view(cx),
+                            Surface::Vault => self.vault_view(cx),
                             Surface::Settings => self.settings_view(cx),
                         });
                     body
@@ -1425,6 +1442,8 @@ impl Render for TrendsDesk {
 mod chrome;
 #[path = "../xl_agents.rs"]
 mod xl_agents;
+#[path = "../xl_loop.rs"]
+mod xl_loop;
 #[path = "../xl_media.rs"]
 mod xl_media;
 pub(crate) use chrome::{HintView, button, page_button};

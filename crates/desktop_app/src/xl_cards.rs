@@ -276,6 +276,7 @@ impl TrendsDesk {
                     .text_color(rgb(0xffd60a))
                     .child(heat)
             }))
+            .children(self.vault_badge(post, cx))
             .children((!status.is_empty()).then(|| div().text_size(px(12.0)).child(status)))
             .child(
                 div()
