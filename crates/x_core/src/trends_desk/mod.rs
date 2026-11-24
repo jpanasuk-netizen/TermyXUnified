@@ -7,6 +7,7 @@
 mod agents;
 mod cards;
 mod carousel;
+mod dankoe;
 mod desk_cmd;
 mod domain;
 mod fetch;
@@ -51,6 +52,7 @@ pub use carousel::{
     Slide, cli_take_prompt, draft_post_label, draft_reply_label, failure_banner,
     handle_from_status, indicator, next_providers, run_take_fallback, slide,
 };
+pub use dankoe::*;
 pub use desk_cmd::{
     find_cached_post, list_drafts, queue_reply, save_draft, search_subject, takes_for_tweet,
     topic_by_subject,
@@ -70,7 +72,7 @@ pub use fetch::{
 };
 pub use grok_take::{
     GrokModel, bind_grok_model, bind_grok_stream, parse_grok_models, refresh_grok_models,
-    take_cleared_grok_model,
+    run_grok_prompt, take_cleared_grok_model,
 };
 pub use hermes_draft::{hermes_take, hermes_take_toned};
 pub use lifecycle::{

@@ -70,6 +70,19 @@ pub(crate) fn run(post: &super::SourcePost, tone: &str) -> Result<String, String
     outcome
 }
 
+/// One headless Grok turn for a prompt that is not a reply take, such as the
+/// Viral Vault's "why it worked". Same flags, file and timeout as a take.
+pub fn run_grok_prompt(prompt: &str, job_id: &str) -> Result<String, String> {
+    if takes_halted() {
+        return Err("takes stopped".into());
+    }
+    let model = selected_model();
+    let path = write_prompt_file(prompt)?;
+    let outcome = run_file(&path, job_id, prompt.len(), model.as_deref());
+    let _ = std::fs::remove_file(&path);
+    outcome
+}
+
 fn write_prompt_file(prompt: &str) -> Result<PathBuf, String> {
     let name = format!(
         "termy-xl-grok-{}-{}.txt",

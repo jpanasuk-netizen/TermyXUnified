@@ -19,7 +19,7 @@ pub const VISIBLE_NAME: &str = "Termy XL";
 pub const GPU_NOTE: &str = "The Termy XL window is drawn with Termy's GPU renderer. An OpenCLI search still waits on the network and the browser bridge; the GPU does not make that search faster.";
 pub const IMAGE_QUOTE_NOTE: &str = "Photos, GIFs, and video on a card, including a quoted tweet, open in Termy. A broken image stays a small placeholder.";
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourcePost {
     pub id: String,
     pub author: String,
@@ -1068,6 +1068,8 @@ pub enum Surface {
     History,
     Replies,
     Draft,
+    ContentMap,
+    Vault,
     Settings,
 }
 
@@ -1077,6 +1079,8 @@ pub enum Nav {
     History,
     Replies,
     Draft,
+    ContentMap,
+    Vault,
     Settings,
 }
 
@@ -1093,6 +1097,8 @@ pub fn surface_after_nav(_current: Surface, nav: Nav) -> Surface {
         Nav::History => Surface::History,
         Nav::Replies => Surface::Replies,
         Nav::Draft => Surface::Draft,
+        Nav::ContentMap => Surface::ContentMap,
+        Nav::Vault => Surface::Vault,
         Nav::Settings => Surface::Settings,
     }
 }
