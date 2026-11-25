@@ -32,6 +32,7 @@ pub fn begin_tone_replace(
 ) -> String {
     if take_should_be_archived(current) {
         remember_saved_take(pack, card_id, current, provider, tone);
+        dedupe_takes(pack, card_id);
         trim_history(pack, card_id);
     }
     DRAFTING_PLACEHOLDER.to_string()
@@ -39,6 +40,16 @@ pub fn begin_tone_replace(
 
 pub fn takes_for_card<'a>(pack: &'a PackFile, card_id: &str) -> &'a [SavedTake] {
     pack.takes.get(card_id).map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// Dedupe history by text, keeping the first copy. Used after a tone click
+/// and when rendering, so leftover duplicates from an older build disappear.
+pub fn dedupe_takes(pack: &mut PackFile, card_id: &str) {
+    let Some(list) = pack.takes.get_mut(card_id) else {
+        return;
+    };
+    let mut seen = std::collections::HashSet::new();
+    list.retain(|take| seen.insert(take.text.clone()));
 }
 
 pub fn restore_saved_take(list: &[SavedTake], index: usize) -> Option<&SavedTake> {
@@ -185,5 +196,71 @@ mod tests {
         let ranked = rank_fetched_posts(posts, "newest", None, |p| engagement_score(p.1, p.2, p.3));
         assert_eq!(ranked[0].0, "a");
         assert_eq!(ranked[1].0, "b");
+    }
+
+    fn texts(pack: &PackFile, id: &str) -> Vec<String> {
+        takes_for_card(pack, id)
+            .iter()
+            .map(|take| take.text.clone())
+            .collect()
+    }
+
+    /// Click archives the box once, the landed take stays only in the box,
+    /// and a later click archives that take once. Re-renders do not grow history.
+    #[test]
+    fn repeated_tone_clicks_archive_each_take_once_and_do_not_duplicate() {
+        let mut pack = pack();
+        let waiting = begin_tone_replace(&mut pack, "c1", "take A", "hermes", "Funny");
+        assert_eq!(waiting, DRAFTING_PLACEHOLDER);
+        let boxed = text_after_tone_take(&waiting, "take B");
+        assert_eq!(boxed, "take B");
+        assert_eq!(texts(&pack, "c1"), ["take A"]);
+
+        let waiting = begin_tone_replace(&mut pack, "c1", &boxed, "hermes", "Smart");
+        let boxed = text_after_tone_take(&waiting, "take C");
+        assert_eq!(boxed, "take C");
+        assert_eq!(texts(&pack, "c1"), ["take A", "take B"]);
+
+        begin_tone_replace(&mut pack, "c1", "take C", "hermes", "Spicy");
+        begin_tone_replace(&mut pack, "c1", "take C", "hermes", "Spicy");
+        begin_tone_replace(&mut pack, "c1", DRAFTING_PLACEHOLDER, "hermes", "Funny");
+        assert_eq!(texts(&pack, "c1"), ["take A", "take B", "take C"]);
+        for _ in 0..8 {
+            let _ = takes_for_card(&pack, "c1").to_vec();
+        }
+        assert_eq!(texts(&pack, "c1"), ["take A", "take B", "take C"]);
+    }
+
+    #[test]
+    fn landing_a_new_take_does_not_put_it_in_history() {
+        let mut pack = pack();
+        let waiting = begin_tone_replace(&mut pack, "c1", "old take", "hermes", "Funny");
+        let _boxed = text_after_tone_take(&waiting, "brand new take");
+        assert_eq!(texts(&pack, "c1"), ["old take"]);
+        assert!(!texts(&pack, "c1").contains(&"brand new take".into()));
+    }
+
+    #[test]
+    fn history_dedupes_by_text_even_when_copies_were_already_stored() {
+        let mut pack = pack();
+        remember_saved_take(&mut pack, "c1", "same take", "hermes", "Funny");
+        pack.takes
+            .get_mut("c1")
+            .unwrap()
+            .push(termy_x_saved("same take", "Smart"));
+        pack.takes
+            .get_mut("c1")
+            .unwrap()
+            .push(termy_x_saved("other take", "Spicy"));
+        dedupe_takes(&mut pack, "c1");
+        assert_eq!(texts(&pack, "c1"), ["same take", "other take"]);
+    }
+
+    fn termy_x_saved(text: &str, tone: &str) -> SavedTake {
+        SavedTake {
+            text: text.into(),
+            provider: "hermes".into(),
+            tone: tone.into(),
+        }
     }
 }

@@ -2,7 +2,10 @@
 
 use crate::io::Http;
 
-use super::agents::{HERMES_MODEL, hermes_auth, hermes_key_resolved};
+use super::agents::{
+    DraftRoute, HERMES_MODEL, PromptCli, execute_draft, hermes_auth, hermes_key_resolved,
+    plan_hermes_draft,
+};
 use super::cards::TakeDraft;
 use super::domain::SourcePost;
 
@@ -48,5 +51,42 @@ pub fn hermes_take_toned(
             note,
             variants: lines,
         }
+    }
+}
+
+struct UnusedCli;
+
+impl PromptCli for UnusedCli {
+    fn run(&self, _program: &str, _args: &[String], _stdin: &str) -> Result<String, String> {
+        Err("cli unused".into())
+    }
+}
+
+/// One Hermes completion for a briefing prompt. Not a take, and nothing is posted.
+pub fn hermes_plain_prompt(
+    config: &crate::config::XConfig,
+    http: &dyn Http,
+    prompt: &str,
+) -> Result<String, String> {
+    let mut config = config.clone();
+    config.hermes_model = HERMES_MODEL.to_string();
+    config.hermes_api_key = hermes_key_resolved(&config.hermes_api_key);
+    let auth = hermes_auth(
+        &config.hermes_base_url,
+        &config.hermes_model,
+        &config.hermes_api_key,
+        "",
+    );
+    let request = plan_hermes_draft(&auth, prompt)?;
+    let route = DraftRoute::Hermes {
+        request,
+        secret: auth.key.clone(),
+    };
+    let text = execute_draft(route, &UnusedCli, http)?;
+    let text = text.trim().to_string();
+    if text.is_empty() {
+        Err("Hermes returned an empty briefing".into())
+    } else {
+        Ok(text)
     }
 }

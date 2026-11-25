@@ -253,13 +253,13 @@ pub fn remove_agents_key(text: &str, key: &str) -> String {
 pub fn tone_instruction(tone: &str) -> &'static str {
     match tone.trim().to_ascii_lowercase().as_str() {
         "funny" => {
-            "Funny means it lands as a joke. The first reply should make a person laugh, not just sound clever."
+            "Funny must actually be funny about THIS post: a specific punchline, an absurd or ironic angle, observational comedy, an unexpected twist, or dry wit in a casual human voice. No generic lol filler and no puns just for the pun. Under 280 characters. Funny stays available on any topic."
         }
         "spicy" | "savage" => {
-            "Savage means the contrarian reply has a real bite. Be bold, not cruel, and stay specific to this post."
+            "Spicy takes the contrarian side of the actual tension in this post. Be bold, not cruel, and stay specific."
         }
         "data" | "smart" => {
-            "Smart means the add-on carries a concrete fact or angle that is actually in the post."
+            "Smart adds a non-obvious insight or a concrete fact or data angle that is actually in the post, not vague commentary."
         }
         "supportive" => "Supportive means warm and specific. No generic praise and no 'so true'.",
         "hype" => "Hype means energetic, still tied to a detail in the post, not empty excitement.",
@@ -269,10 +269,18 @@ pub fn tone_instruction(tone: &str) -> &'static str {
 }
 
 pub fn reply_prompt(author: &str, tweet: &str, tone: &str) -> String {
-    format!(
+    let prompt = format!(
         "Tone: {tone}\n{}\nAuthor: @{author}\nPost:\n{tweet}\n\nWrite exactly 3 replies a person would post on X. They must differ in approach and voice:\n(a) a sharp witty or funny one-liner that is actually funny\n(b) a smart add-on with a concrete fact or angle drawn from the tweet itself\n(c) a bold contrarian or spicy take\nEach one under 280 characters. Casual human voice. Do not start with Agree, Question:, or Contrarian:. Use specifics from the post. No generic filler, no hashtags, no emoji spam. Separate them with a line containing only ---. Output only the 3 replies.",
-        tone_instruction(tone)
-    )
+        tone_instruction(tone),
+    );
+    let prompt = match super::take_steer::active_analysis_block() {
+        Some(briefing) => format!("{prompt}\n{briefing}"),
+        None => prompt,
+    };
+    match super::viral_hooks::active_take_hook() {
+        Some(hook) => format!("{prompt}\n{}", super::viral_hooks::hook_prompt_line(hook)),
+        None => prompt,
+    }
 }
 
 /// Word overlap. Above this, two replies are the same joke in different clothes.
@@ -1334,8 +1342,11 @@ mod tests {
         let tweet =
             "The appeals court spent the morning asking whether a model can sign a legal opinion.";
         let funny = reply_prompt("ada", tweet, "Funny");
-        assert!(funny.contains("lands as a joke"));
-        assert!(reply_prompt("ada", tweet, "Spicy").contains("bite"));
+        assert!(funny.contains("punchline"));
+        assert!(funny.contains("dry wit"));
+        assert!(!funny.to_ascii_lowercase().contains("skip"));
+        assert!(!funny.to_ascii_lowercase().contains("tragedy"));
+        assert!(reply_prompt("ada", tweet, "Spicy").contains("contrarian side"));
         assert!(reply_prompt("ada", tweet, "Smart").contains("concrete fact"));
         let stub = "The model asked for a pen and the clerk asked for a bar number.\n---\nThe transcript shows the panel kept returning to who is responsible when the cited case does not exist.\n---\nA model signing an opinion is not efficiency. It is a clerk with no malpractice insurance.";
         let (lines, note) = variants_from_draft(tweet, Ok(stub.into()));

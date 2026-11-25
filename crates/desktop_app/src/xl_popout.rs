@@ -42,7 +42,6 @@ impl TrendsDesk {
         } else {
             draft_text.clone()
         };
-        // Drafting…/streaming text is a status, not the editable reply.
         let dim = streaming || waiting;
         let caret = self
             .reply_edit
@@ -63,7 +62,6 @@ impl TrendsDesk {
         };
         let status = self.action_note.clone();
 
-        // Quiet row: voice chips, provider, Copy.
         let mut tools = div()
             .flex()
             .flex_wrap()
@@ -73,6 +71,7 @@ impl TrendsDesk {
         for (index, tone) in panel_tones().into_iter().enumerate() {
             tools = tools.child(variant_chip(panel_tone_name(tone), index, cx));
         }
+        tools = tools.child(self.hook_cycle_chip(cx));
         if status.contains("Vyce direct") {
             tools = tools.child(box_button(
                 "desk-vyce-direct",
@@ -153,7 +152,6 @@ impl TrendsDesk {
                 }),
             );
 
-        // Bottom row inside the pink box: count and note left, Post right.
         let count = termy_x::trends_desk::char_count(&shown);
         let over = count > 280;
         let mut left = div()
@@ -224,6 +222,7 @@ impl TrendsDesk {
             .child(tools)
             .children((!self.take_banner.is_empty()).then(|| self.failure_banner(cx)))
             .children(generating.then(|| self.cancel_row(cx)))
+            .child(self.why_popping_row())
             .child(editor)
             .child(self.take_history_row(cx))
             .child(bottom);
@@ -787,6 +786,8 @@ impl TrendsDesk {
             config.ai_key_env = self.settings.custom_key_env.clone();
             config.ai_api_key.clear();
         }
+        self.ensure_hook_choice(&id);
+        let chosen_hook = self.hook_choice;
         let tone = termy_x::trends_desk::panel_tone_name(termy_x::trends_desk::TakeTone::parse(
             &self.pack.tone,
         ))
@@ -813,6 +814,7 @@ impl TrendsDesk {
             let (done_tx, done_rx) = std::sync::mpsc::channel();
             let tone_done = tone.clone();
             std::thread::spawn(move || {
+                let popping_tx = note_tx.clone();
                 let _guard = termy_x::trends_desk::bind_retry_notice(Some(note_tx));
                 let _stream = termy_x::trends_desk::bind_grok_stream(Some(part_tx));
                 let _model = termy_x::trends_desk::bind_grok_model(grok_model);
@@ -824,6 +826,35 @@ impl TrendsDesk {
                     termy_x::trends_desk::TAKE_TIMEOUT
                 };
                 let http = termy_x::io::UreqHttp::with_timeout(limit);
+                let job = format!("steer-{}", post.id);
+                let analysis = termy_x::trends_desk::steer_post(&post, |prompt| {
+                    match termy_x::trends_desk::run_grok_prompt(prompt, &job) {
+                        Ok(text) if !text.trim().is_empty() => Ok(text),
+                        grok_err => {
+                            termy_x::trends_desk::hermes_plain_prompt(&config, &http, prompt)
+                                .or(grok_err)
+                        }
+                    }
+                });
+                if let Some(line) = analysis
+                    .as_ref()
+                    .map(termy_x::trends_desk::why_popping_line)
+                    .filter(|line| !line.is_empty())
+                {
+                    let _ = popping_tx.send(line);
+                }
+                let _briefing = termy_x::trends_desk::bind_take_analysis(analysis.as_ref());
+                let preferred = analysis
+                    .as_ref()
+                    .map(|item| item.hooks.clone())
+                    .unwrap_or_default();
+                let _hook_guard = termy_x::trends_desk::send_bound_hook(
+                    &tone,
+                    &post.text,
+                    &preferred,
+                    chosen_hook,
+                    &popping_tx,
+                );
                 let result = if fallback {
                     termy_x::trends_desk::run_take_fallback(
                         provider, &config, &post, &http, &tone, true,
@@ -849,7 +880,13 @@ impl TrendsDesk {
                     Err(std::sync::mpsc::TryRecvError::Empty) => {
                         while let Ok(msg) = note_rx.try_recv() {
                             let _ = this.update(cx, |desk, cx| {
-                                desk.action_note = msg;
+                                if let Some(id) =
+                                    desk.popout.as_ref().map(|pop| pop.card_id.clone())
+                                {
+                                    desk.take_note_msg(id, msg);
+                                } else {
+                                    desk.action_note = msg;
+                                }
                                 cx.notify();
                             });
                         }
@@ -957,7 +994,8 @@ impl TrendsDesk {
         } else {
             result.note.clone()
         };
-        termy_x::trends_desk::remember_saved_take(&mut self.pack, id, &next, &label, tone);
+        self.why_popping = termy_x::trends_desk::cached_why_popping(id);
+        self.why_popping_for = id.to_string();
         self.save_pack_file();
         if let Some(pop) = self.popout.as_mut().filter(|pop| pop.card_id == id) {
             pop.draft = next.clone();
@@ -1026,6 +1064,11 @@ impl TrendsDesk {
         self.take_started = Some(std::time::Instant::now());
         self.take_banner.clear();
         self.stream_take.clear();
+        self.why_popping = termy_x::trends_desk::cached_why_popping(&id);
+        self.why_popping_for = id.clone();
+        if self.why_popping.is_empty() {
+            self.action_note = "Analyzing why this is popping…".into();
+        }
         self.spawn_one_take(id, false, cx);
     }
 

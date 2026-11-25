@@ -99,13 +99,27 @@ pub fn draft_reply_label(url: &str, author: &str) -> String {
     }
 }
 
-/// Tweet plus a short instruction. CLI takes stay near 400 characters.
+/// Tweet, tone guidance, and any bound post briefing. Stored in a prompt file.
+pub const CLI_TAKE_PROMPT_MAX: usize = 2000;
+
 pub fn cli_take_prompt(author: &str, tweet: &str, tone: &str) -> String {
     let author = author.trim().trim_start_matches('@');
+    let guide = super::take_steer::flatten_one_line(super::agents::tone_instruction(tone));
+    let briefing = super::take_steer::active_analysis_block()
+        .map(|block| format!(" {} ", super::take_steer::flatten_one_line(&block)))
+        .unwrap_or_else(|| " ".into());
+    let hook = super::viral_hooks::active_take_hook()
+        .map(|hook| {
+            format!(
+                " {} ",
+                super::take_steer::flatten_one_line(&super::viral_hooks::hook_prompt_line(hook))
+            )
+        })
+        .unwrap_or_else(|| " ".into());
     let head = format!(
-        "Tone {tone}. One X reply under 280 characters. Reply text only. No tools. @{author}: "
+        "Tone {tone}. {guide}{briefing}{hook}One X reply under 280 characters. Reply text only. No tools. @{author}: "
     );
-    let room = 400usize.saturating_sub(head.chars().count());
+    let room = CLI_TAKE_PROMPT_MAX.saturating_sub(head.chars().count());
     let tweet: String = tweet
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -170,8 +184,12 @@ mod tests {
             cli_take_prompt("ada", &"word ".repeat(200), "Funny")
                 .chars()
                 .count()
-                <= 400
+                <= CLI_TAKE_PROMPT_MAX
         );
+        let funny = cli_take_prompt("ada", "courts posted a draft", "Funny");
+        assert!(funny.contains("punchline"));
+        assert!(funny.contains("courts posted a draft"));
+        assert!(!funny.contains('\n'));
         assert!(cli_take_prompt("ada", "courts posted a draft", "Spicy").contains("courts"));
         assert_eq!(
             failure_banner("grok", "grok timed out after 5 minutes"),

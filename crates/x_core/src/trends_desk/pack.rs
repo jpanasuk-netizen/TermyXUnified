@@ -861,7 +861,7 @@ pub fn remember_saved_take(
         return;
     }
     let list = pack.takes.entry(card_id.to_string()).or_default();
-    if list.last().is_some_and(|item| item.text == text) {
+    if list.iter().any(|item| item.text == text) {
         return;
     }
     list.push(SavedTake {

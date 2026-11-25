@@ -562,8 +562,9 @@ mod tests {
         );
         assert!(listed.iter().any(|model| model.id == "grok-build"));
         let short = cli_take_prompt("ada", &"courts ".repeat(300), "Funny");
-        assert!(short.chars().count() <= 400);
+        assert!(short.chars().count() <= 2000);
         assert!(short.contains("Reply text only"));
+        assert!(short.contains("punchline"));
         assert_eq!(
             super::super::takes::GROK_TAKE_TIMEOUT,
             std::time::Duration::from_secs(300)

@@ -22,7 +22,9 @@ mod retry;
 mod snap;
 mod store;
 mod take_hist;
+mod take_steer;
 mod takes;
+mod viral_hooks;
 
 pub use agents::{
     AgentPane, DraftRoute, HERMES_BASE, HERMES_HEALTH_PATH, HERMES_MODEL, HERMES_VYCE_LABEL,
@@ -75,7 +77,7 @@ pub use grok_take::{
     GrokModel, bind_grok_model, bind_grok_stream, parse_grok_models, refresh_grok_models,
     run_grok_prompt, take_cleared_grok_model,
 };
-pub use hermes_draft::{hermes_take, hermes_take_toned};
+pub use hermes_draft::{hermes_plain_prompt, hermes_take, hermes_take_toned};
 pub use lifecycle::{
     DeskSession, EscapeEffect, OffUiRequest, PruneLog, RefreshPress, child_is_gone,
     click_after_scroll, escape_effect, escape_requests_quit, focus_loss_closes_the_window,
@@ -124,6 +126,11 @@ pub use take_hist::{
     rank_fetched_posts, restore_saved_take, take_should_be_archived, takes_for_card,
     text_after_tone_take, treg_missing_key_message,
 };
+pub use take_steer::{
+    AnalysisGuard, PostAnalysis, active_analysis_block, analysis_prompt, bind_take_analysis,
+    cached_analysis, cached_why_popping, flatten_one_line, parse_analysis, steer_post,
+    unique_takes_by_text, why_popping_line,
+};
 pub use takes::{
     CLICK_TO_DRAFT, DeskEvent, GROK_TAKE_TIMEOUT, HERMES_TAKE_TIMEOUT, HONEST_PREFIX, PROBE_PROMPT,
     PROBE_TIMEOUT, TAKE_CHAIN, TAKE_TIMEOUT, TakeSources, accept_lines, admit_grok, agent_work_dir,
@@ -135,6 +142,12 @@ pub use takes::{
     provider_kind, provider_label, provider_model, resume_takes, retain_grok_jobs, run_take_chain,
     run_take_chain_with, settle_variants, specific_transport_error, take_chain_order, take_spawns,
     takes_halted, verify_status, with_grok_stub,
+};
+pub use viral_hooks::{
+    HookGuard, VIRAL_HOOKS, ViralHook, active_take_hook, bind_take_hook, bind_take_hook_for_post,
+    hook_by_id, hook_catalog_brief, hook_pattern_report, hook_picks_msg, hook_prompt_line,
+    match_opening_hook, next_hook_id, opens_with_hook, parse_hook_ids, parse_hook_picks_msg,
+    recommend_hooks, resolve_hook, send_bound_hook,
 };
 
 const SYNTHETIC_OPENCLI: &str = include_str!("synthetic_opencli.json");
