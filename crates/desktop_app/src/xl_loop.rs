@@ -240,9 +240,7 @@ impl TrendsDesk {
     fn flagged_now(&self) -> Vec<(SourcePost, ViralFlag)> {
         let mut seen = HashSet::new();
         let mut rows: Vec<(SourcePost, ViralFlag)> = self.with_flags(|flags| {
-            self.columns
-                .iter()
-                .flat_map(|column| column.view.posts.iter())
+            self.all_posts()
                 .filter(|post| seen.insert(post.id.clone()))
                 .filter_map(|post| flags.get(&post.id).map(|flag| (post.clone(), flag.clone())))
                 .collect()
@@ -252,13 +250,7 @@ impl TrendsDesk {
     }
 
     fn save_to_vault(&mut self, post_id: &str) {
-        let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
-            .find(|post| post.id == post_id)
-            .cloned()
-        else {
+        let Some(post) = self.all_posts().find(|post| post.id == post_id).cloned() else {
             self.action_note = "That post is no longer on the desk.".into();
             return;
         };

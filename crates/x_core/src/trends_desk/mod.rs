@@ -15,10 +15,12 @@ mod grok_take;
 mod growth;
 mod hermes_draft;
 mod lifecycle;
+mod linked;
 mod log;
 mod media;
 mod pack;
 mod parse;
+mod repost;
 mod retry;
 mod sent;
 mod snap;
@@ -90,6 +92,7 @@ pub use lifecycle::{
     click_after_scroll, escape_effect, escape_requests_quit, focus_loss_closes_the_window,
     press_refresh, prune_backups, quit_dialog_for_agents, reap_child, start_off_ui,
 };
+pub use linked::{LinkedRead, StatusRef, linked_from_stdout, parse_status_ref, status_args};
 pub use log::{
     append_desk_log, exit_log_line, exit_reason, install_panic_log, note_exit_reason,
     panic_log_line, redact_log, remember_exit, should_log_model_failure,

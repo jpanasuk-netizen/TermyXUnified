@@ -11,6 +11,7 @@ mod xl_cards;
 mod xl_dock;
 mod xl_host;
 mod xl_instance;
+mod xl_link;
 mod xl_pack;
 mod xl_popout;
 mod xl_reply_text;

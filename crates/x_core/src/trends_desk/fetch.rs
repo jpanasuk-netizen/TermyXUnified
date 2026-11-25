@@ -194,6 +194,7 @@ impl OpenCliDesk {
                             verified: false,
                             lang: String::new(),
                             in_reply_to: None,
+                            reposted_by: None,
                         }
                     })
                     .collect();
@@ -244,7 +245,7 @@ impl OpenCliDesk {
         Ok(out)
     }
 
-    fn preflight(&self) -> Result<(), String> {
+    pub(super) fn preflight(&self) -> Result<(), String> {
         refuse_unsafe_cli_name(&self.bin)?;
         if self.hermes_dir.is_some() || self.runner.exists(&self.bin) {
             Ok(())
@@ -253,7 +254,7 @@ impl OpenCliDesk {
         }
     }
 
-    fn run(
+    pub(super) fn run(
         &self,
         args: &[String],
         timeout: Duration,

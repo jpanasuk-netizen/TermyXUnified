@@ -507,9 +507,7 @@ impl TrendsDesk {
             return;
         };
         let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
+            .all_posts()
             .find(|post| post.id == pop.card_id)
             .cloned()
         else {
@@ -739,13 +737,7 @@ impl TrendsDesk {
     ) {
         self.takes_halted = false;
         termy_x::trends_desk::resume_takes();
-        let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
-            .find(|post| post.id == id)
-            .cloned()
-        else {
+        let Some(post) = self.all_posts().find(|post| post.id == id).cloned() else {
             if open_compose {
                 let message = termy_x::trends_desk::text_after_take(
                     termy_x::trends_desk::DRAFTING_PLACEHOLDER,
@@ -1150,13 +1142,7 @@ impl TrendsDesk {
             .get(&id)
             .cloned()
             .unwrap_or(ReplyPhase::Idle);
-        let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
-            .find(|post| post.id == id)
-            .cloned()
-        else {
+        let Some(post) = self.all_posts().find(|post| post.id == id).cloned() else {
             return;
         };
         match request_send(&phase, true) {

@@ -90,14 +90,10 @@ impl TrendsDesk {
     }
 
     pub(crate) fn toggle_star(&mut self, id: &str) {
+        let found = self.all_posts().find(|post| post.id == id).cloned();
         if let Some(index) = self.pack.hits.iter().position(|hit| hit.id == id) {
             self.pack.hits.remove(index);
-        } else if let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
-            .find(|post| post.id == id)
-        {
+        } else if let Some(post) = found {
             self.pack.hits.push(termy_x::trends_desk::HitItem {
                 id: post.id.clone(),
                 url: post.url.clone(),
@@ -122,12 +118,19 @@ impl TrendsDesk {
                 self.palette = false;
             } else if key == "backspace" {
                 self.palette_query.pop();
+            } else if ctrl && key == "v" {
+                self.palette_paste(cx);
+            } else if key == "enter" {
+                self.palette_enter(cx);
             }
             cx.notify();
             return true;
         }
         if self.surface != termy_x::trends_desk::Surface::Columns || self.field.is_some() {
             return false;
+        }
+        if ctrl && key == "v" && self.paste_link_key(cx) {
+            return true;
         }
         match desk_key(key, ctrl, shift) {
             DeskKey::Palette => self.palette = true,
@@ -229,8 +232,18 @@ impl TrendsDesk {
                     termy_x::trends_desk::reply_goal_or_default(self.pack.reply_goal)
                 ),
             ),
+            ("openlink".into(), "Open post link from clipboard".into()),
             ("termy".into(), "Termy areas".into()),
         ];
+        if termy_x::trends_desk::parse_status_ref(&self.palette_query).is_some() {
+            rows.insert(
+                0,
+                (
+                    format!("link:{}", self.palette_query),
+                    "Open the post link you pasted".into(),
+                ),
+            );
+        }
         for column in &self.columns {
             rows.push((
                 format!("subject:{}", column.topic.id),
@@ -244,7 +257,8 @@ impl TrendsDesk {
             ));
         }
         for (id, label) in rows {
-            if !query.is_empty() && !label.to_lowercase().contains(&query) {
+            let link_row = id.starts_with("link:");
+            if !link_row && !query.is_empty() && !label.to_lowercase().contains(&query) {
                 continue;
             }
             let action = id.clone();
@@ -253,7 +267,7 @@ impl TrendsDesk {
                 label,
                 false,
                 cx.listener(move |this, _, _, cx| {
-                    this.run_palette(&action);
+                    this.run_palette_cx(&action, cx);
                     cx.stop_propagation();
                     cx.notify();
                 }),
@@ -450,6 +464,9 @@ impl TrendsDesk {
             .iter()
             .position(|column| column.topic.id == self.settings.subject_id)
             .unwrap_or(0);
+        if self.board == "link" {
+            return self.link_page(width, cx);
+        }
         if let Some(page) = self.special_page(cx) {
             return page;
         }
@@ -487,119 +504,118 @@ impl TrendsDesk {
         );
         let ids: Vec<String> = visible.iter().map(|post| post.id.clone()).collect();
         let frames = layout_takes(width, &ids);
-        let page = div()
-            .size_full()
-            .flex()
-            .flex_col()
-            .p(px(WINDOW_PAD))
-            .on_mouse_down(
-                MouseButton::Left,
-                cx.listener(|this, _, _, cx| {
-                    this.selected = None;
-                    cx.notify();
-                }),
-            )
-            .child(
-                div()
-                    .id("desk-subject-page")
-                    .flex_1()
-                    .min_h(px(0.0))
-                    .w_full()
-                    .rounded(px(16.0))
-                    .border_1()
-                    .border_color(if subject_selected {
-                        rgb(0xffe56a)
-                    } else {
-                        rgb(0xffd60a)
-                    })
-                    .bg(if subject_selected {
-                        rgb(0x2a2410)
-                    } else {
-                        rgb(0x12100a)
-                    })
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.0))
-                    .p(px(12.0))
-                    .relative()
-                    .pt(px(termy_x::trends_desk::PAGE_BAR_H))
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(|this, _, _, cx| {
-                            this.selected = None;
-                            cx.notify();
-                        }),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(12.0))
-                            .text_color(rgb(0x8e8e93))
-                            .child(column.topic.desc.clone()),
-                    )
-                    .child({
-                        let topic_id = column.topic.id.clone();
-                        let mut list = div()
-                            .id("desk-take-list")
-                            .flex_1()
-                            .min_h(px(0.0))
-                            .overflow_y_scroll()
-                            .flex()
-                            .flex_row()
-                            .flex_wrap()
-                            .items_start()
-                            .gap(px(12.0));
-                        if column.view.phase == Phase::Loading && visible.is_empty() {
-                            list = list.child(status_row(
-                                "Loading takes…",
-                                refresh_button(topic_id.clone(), cx),
-                            ));
-                        } else if column.view.phase == Phase::Error && visible.is_empty() {
-                            list = list.child(status_row(
-                                &column.view.banner,
-                                refresh_button(topic_id.clone(), cx),
-                            ));
-                        } else if visible.is_empty() {
-                            list = list.child(
-                                div()
-                                    .flex()
-                                    .flex_row()
-                                    .items_center()
-                                    .gap(px(8.0))
-                                    .h(px(36.0))
-                                    .child("No results yet. Search for a topic.")
-                                    .child(refresh_button(topic_id.clone(), cx)),
-                            );
-                        }
-                        if hidden > 0 {
-                            list = list.child(button(
-                                "desk-show-more",
-                                format!("Show {hidden} more"),
-                                false,
-                                cx.listener(|this, _, _, cx| {
-                                    this.card_window = this.card_window.saturating_add(12);
-                                    cx.stop_propagation();
-                                    cx.notify();
-                                }),
-                            ));
-                        }
-                        for (post, frame) in visible.iter().zip(frames.iter()) {
-                            list = list.child(
-                                div()
-                                    .w(px(frame.width))
-                                    .min_w(px(0.0))
-                                    .child(self.tweet_card(post, column, frame.width, cx)),
-                            );
-                        }
-                        list
-                    })
-                    .child(page_bar(
-                        label,
-                        index,
-                        &column.topic.sort,
-                        &column.topic.search_source,
-                        cx,
-                    )),
-            );
+        let page =
+            div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .p(px(WINDOW_PAD))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(|this, _, _, cx| {
+                        this.selected = None;
+                        cx.notify();
+                    }),
+                )
+                .child(
+                    div()
+                        .id("desk-subject-page")
+                        .flex_1()
+                        .min_h(px(0.0))
+                        .w_full()
+                        .rounded(px(16.0))
+                        .border_1()
+                        .border_color(if subject_selected {
+                            rgb(0xffe56a)
+                        } else {
+                            rgb(0xffd60a)
+                        })
+                        .bg(if subject_selected {
+                            rgb(0x2a2410)
+                        } else {
+                            rgb(0x12100a)
+                        })
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.0))
+                        .p(px(12.0))
+                        .relative()
+                        .pt(px(termy_x::trends_desk::PAGE_BAR_H))
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(|this, _, _, cx| {
+                                this.selected = None;
+                                cx.notify();
+                            }),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(12.0))
+                                .text_color(rgb(0x8e8e93))
+                                .child(column.topic.desc.clone()),
+                        )
+                        .child({
+                            let topic_id = column.topic.id.clone();
+                            let mut list = div()
+                                .id("desk-take-list")
+                                .flex_1()
+                                .min_h(px(0.0))
+                                .overflow_y_scroll()
+                                .flex()
+                                .flex_row()
+                                .flex_wrap()
+                                .items_start()
+                                .gap(px(12.0));
+                            if column.view.phase == Phase::Loading && visible.is_empty() {
+                                list = list.child(status_row(
+                                    "Loading takes…",
+                                    refresh_button(topic_id.clone(), cx),
+                                ));
+                            } else if column.view.phase == Phase::Error && visible.is_empty() {
+                                list = list.child(status_row(
+                                    &column.view.banner,
+                                    refresh_button(topic_id.clone(), cx),
+                                ));
+                            } else if visible.is_empty() {
+                                list = list.child(
+                                    div()
+                                        .flex()
+                                        .flex_row()
+                                        .items_center()
+                                        .gap(px(8.0))
+                                        .h(px(36.0))
+                                        .child("No results yet. Search for a topic.")
+                                        .child(refresh_button(topic_id.clone(), cx)),
+                                );
+                            }
+                            if hidden > 0 {
+                                list = list.child(button(
+                                    "desk-show-more",
+                                    format!("Show {hidden} more"),
+                                    false,
+                                    cx.listener(|this, _, _, cx| {
+                                        this.card_window = this.card_window.saturating_add(12);
+                                        cx.stop_propagation();
+                                        cx.notify();
+                                    }),
+                                ));
+                            }
+                            for (post, frame) in visible.iter().zip(frames.iter()) {
+                                list =
+                                    list.child(div().w(px(frame.width)).min_w(px(0.0)).child(
+                                        self.tweet_card(post, &column.tags, frame.width, cx),
+                                    ));
+                            }
+                            list
+                        })
+                        .child(page_bar(
+                            label,
+                            index,
+                            &column.topic.sort,
+                            &column.topic.search_source,
+                            cx,
+                        )),
+                );
         let mut rows: Vec<gpui_kit::AnyElement> = vec![page.into_any_element()];
         if self.session.state == SessionState::Missing {
             rows.insert(

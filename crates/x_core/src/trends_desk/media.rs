@@ -18,6 +18,34 @@ pub struct QuotedTweet {
     pub author: String,
     pub text: String,
     pub media: Vec<MediaItem>,
+    /// Display name, when the row carries one.
+    #[serde(default)]
+    pub name: String,
+    /// Link to the quoted post. With no text and no media it is the only thing
+    /// shown, as "could not be loaded".
+    #[serde(default)]
+    pub url: String,
+}
+
+impl QuotedTweet {
+    /// "Quote · @author", with the display name when the row has one.
+    pub fn header(&self) -> String {
+        match (self.name.is_empty(), self.author.is_empty()) {
+            (_, true) => "Quote".into(),
+            (true, false) => format!("Quote · @{}", self.author),
+            (false, false) => format!("Quote · {} · @{}", self.name, self.author),
+        }
+    }
+
+    /// The quoted text, or a plain "could not be loaded" line when only the
+    /// link is known. Never invented text.
+    pub fn body(&self) -> String {
+        if self.text.is_empty() && self.media.is_empty() {
+            "Quoted post could not be loaded.".into()
+        } else {
+            self.text.clone()
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -42,20 +70,76 @@ pub fn quoted_from_post(value: &Value) -> Option<QuotedTweet> {
         let Some(node) = value.get(key).filter(|item| item.is_object()) else {
             continue;
         };
-        let inner = node.get("tweet").unwrap_or(node);
+        let inner = node.get("result").unwrap_or(node);
+        let inner = inner.get("tweet").unwrap_or(inner);
         let media = items_from_post(inner);
-        let text = text_of(inner);
+        let mut text = text_of(inner);
+        if text.is_empty()
+            && let Some(legacy) = inner.get("legacy")
+        {
+            text = text_of(legacy);
+        }
         let author = author_of(inner);
         if media.is_empty() && text.is_empty() {
             continue;
         }
         return Some(QuotedTweet {
+            url: quoted_url(inner, &author),
+            name: name_of(inner),
             author,
             text,
             media,
         });
     }
     None
+}
+
+/// Quoted post id a row names without embedding the post.
+pub fn quoted_reference_id(value: &Value) -> Option<String> {
+    for key in [
+        "quoted_status_id_str",
+        "quoted_status_id",
+        "quoted_tweet_id",
+    ] {
+        let Some(raw) = value.get(key) else {
+            continue;
+        };
+        let id = raw
+            .as_str()
+            .map(str::to_string)
+            .or_else(|| raw.as_u64().map(|number| number.to_string()))
+            .unwrap_or_default();
+        if !id.is_empty() && id.chars().all(|ch| ch.is_ascii_digit()) {
+            return Some(id);
+        }
+    }
+    None
+}
+
+fn quoted_url(inner: &Value, author: &str) -> String {
+    if let Some(url) = inner.get("url").and_then(Value::as_str)
+        && url.starts_with("http")
+    {
+        return url.to_string();
+    }
+    let id = ["id", "id_str", "rest_id"]
+        .iter()
+        .find_map(|key| inner.get(*key).and_then(Value::as_str))
+        .unwrap_or("");
+    if id.is_empty() {
+        String::new()
+    } else {
+        crate::model::post_url(author, id)
+    }
+}
+
+fn name_of(value: &Value) -> String {
+    for key in ["name", "author_name", "authorName"] {
+        if let Some(text) = value.get(key).and_then(Value::as_str) {
+            return text.trim().to_string();
+        }
+    }
+    value.get("user").map(name_of).unwrap_or_default()
 }
 
 fn text_of(value: &Value) -> String {
@@ -81,6 +165,13 @@ fn author_of(value: &Value) -> String {
     }
     if let Some(user) = value.get("user") {
         return author_of(user);
+    }
+    if let Some(legacy) = value
+        .pointer("/core/user_results/result/legacy")
+        .or_else(|| value.pointer("/core/user_results/result/core"))
+        && let Some(text) = legacy.get("screen_name").and_then(Value::as_str)
+    {
+        return crate::model::strip_handle(text).to_string();
     }
     String::new()
 }
@@ -324,6 +415,48 @@ pub fn prune_cache(dir: &Path, cap: u64) -> Vec<PathBuf> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn quoted_header_body_and_unavailable_link() {
+        let full = QuotedTweet {
+            author: "grace".into(),
+            name: "Grace".into(),
+            text: "hello".into(),
+            ..QuotedTweet::default()
+        };
+        assert_eq!(full.header(), "Quote · Grace · @grace");
+        assert_eq!(full.body(), "hello");
+        let bare = QuotedTweet {
+            url: "https://x.com/i/status/5".into(),
+            ..QuotedTweet::default()
+        };
+        assert_eq!(bare.header(), "Quote");
+        assert_eq!(bare.body(), "Quoted post could not be loaded.");
+        assert_eq!(
+            QuotedTweet {
+                author: "g".into(),
+                text: "t".into(),
+                ..QuotedTweet::default()
+            }
+            .header(),
+            "Quote · @g"
+        );
+    }
+
+    #[test]
+    fn quoted_graphql_nesting_reads_text_author_and_link() {
+        let row = serde_json::json!({
+            "quoted_status_result": {"result": {"tweet": {
+                "rest_id": "77",
+                "core": {"user_results": {"result": {"legacy": {"screen_name": "zed"}}}},
+                "legacy": {"full_text": "from graphql"}
+            }}}
+        });
+        let quoted = quoted_from_post(&row).unwrap();
+        assert_eq!(quoted.author, "zed");
+        assert_eq!(quoted.text, "from graphql");
+        assert_eq!(quoted.url, "https://x.com/zed/status/77");
+    }
 
     #[test]
     fn parser_keeps_photo_video_gif_and_quoted_media() {

@@ -5,14 +5,14 @@ use gpui_kit::{
     Render, SharedString, StatefulInteractiveElement, Styled, Window, div, hsla, px, rgb,
 };
 
-use crate::trends_desk::{ColumnUi, TrendsDesk, button};
+use crate::trends_desk::{TrendsDesk, button};
 use termy_x::trends_desk::{ChangeTag, ReplyPhase, card_from_post, scroll_by, wrap_token};
 
 impl TrendsDesk {
     pub(crate) fn tweet_card(
         &self,
         post: &termy_x::trends_desk::SourcePost,
-        column: &ColumnUi,
+        tags: &[(String, ChangeTag)],
         width: f32,
         cx: &mut Context<Self>,
     ) -> gpui_kit::AnyElement {
@@ -22,8 +22,7 @@ impl TrendsDesk {
             .get(&card.id)
             .cloned()
             .unwrap_or(ReplyPhase::Idle);
-        let tag = column
-            .tags
+        let tag = tags
             .iter()
             .find(|(url, _)| url == &card.url)
             .map(|(_, tag)| match tag {
@@ -183,6 +182,12 @@ impl TrendsDesk {
                         .into()
                     })
             }))
+            .children(post.reposted_by.clone().map(|by| {
+                div()
+                    .text_size(px(12.0))
+                    .text_color(rgb(0xc7c7cc))
+                    .child(format!("↻ Reposted by @{}", wrap_token(&by)))
+            }))
             .child({
                 let profile_id = id.clone();
                 let handle = card.handle.clone();
@@ -249,14 +254,20 @@ impl TrendsDesk {
                         div()
                             .text_size(px(12.0))
                             .text_color(rgb(0xc7c7cc))
-                            .child(format!("Quote · @{}", wrap_token(&quoted.author))),
+                            .child(wrap_token(&quoted.header())),
                     )
                     .child(
                         div()
                             .text_size(px(12.0))
                             .whitespace_normal()
-                            .child(wrap_token(&quoted.text)),
-                    );
+                            .child(wrap_token(&quoted.body())),
+                    )
+                    .children((!quoted.url.is_empty()).then(|| {
+                        div()
+                            .text_size(px(11.0))
+                            .text_color(rgb(0x7af6ff))
+                            .child(wrap_token(&quoted.url))
+                    }));
                 if !quoted.media.is_empty() {
                     quote =
                         quote.child(self.media_block(&quoted.media, (width - 36.0).max(80.0), cx));

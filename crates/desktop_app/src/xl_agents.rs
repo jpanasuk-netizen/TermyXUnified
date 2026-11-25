@@ -195,9 +195,7 @@ impl TrendsDesk {
             return;
         };
         let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
+            .all_posts()
             .find(|post| post.id == pop.card_id)
             .cloned()
         else {
@@ -541,9 +539,7 @@ impl TrendsDesk {
             return;
         };
         let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
+            .all_posts()
             .find(|post| post.id == pop.card_id)
             .cloned()
         else {

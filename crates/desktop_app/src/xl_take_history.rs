@@ -148,9 +148,7 @@ impl TrendsDesk {
             .map(|analysis| analysis.hooks)
             .unwrap_or_default();
         let text = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
+            .all_posts()
             .find(|post| post.id == post_id)
             .map(|post| post.text.clone())
             .unwrap_or_default();

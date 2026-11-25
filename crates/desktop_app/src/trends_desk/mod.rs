@@ -105,6 +105,7 @@ pub struct TrendsDesk {
     pub(crate) palette: bool,
     pub(crate) palette_query: String,
     pub(crate) board: String,
+    pub(crate) linked: Option<crate::xl_link::LinkedLoad>,
     pub(crate) x_panel: Option<gpui_kit::Entity<crate::x_panel::XPanel>>,
     pub(crate) last_host: Option<termy_x::trends_desk::WindowRect>,
     pub(crate) last_host_key: Option<(termy_x::trends_desk::WindowRect, bool)>,
@@ -288,6 +289,7 @@ impl TrendsDesk {
             palette: false,
             palette_query: String::new(),
             board: "subject".into(),
+            linked: None,
             x_panel: None,
             last_host: None,
             last_host_key: None,
@@ -973,13 +975,7 @@ impl TrendsDesk {
     }
 
     pub(crate) fn show_thread(&mut self, id: &str) {
-        let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
-            .find(|post| post.id == id)
-            .cloned()
-        else {
+        let Some(post) = self.all_posts().find(|post| post.id == id).cloned() else {
             self.action_note = "That post is not in this window.".into();
             return;
         };
@@ -996,9 +992,7 @@ impl TrendsDesk {
     pub(crate) fn show_profile(&mut self, handle: &str) {
         let handle = handle.trim().trim_start_matches('@');
         let posts: Vec<String> = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
+            .all_posts()
             .filter(|post| post.author == handle)
             .map(|post| post.text.clone())
             .collect();
@@ -1049,13 +1043,7 @@ impl TrendsDesk {
     }
 
     pub(crate) fn open_quote(&mut self, id: &str, cx: &mut Context<Self>) {
-        let Some(post) = self
-            .columns
-            .iter()
-            .flat_map(|column| column.view.posts.iter())
-            .find(|post| post.id == id)
-            .cloned()
-        else {
+        let Some(post) = self.all_posts().find(|post| post.id == id).cloned() else {
             self.action_note = "That post is not in this window.".into();
             cx.notify();
             return;

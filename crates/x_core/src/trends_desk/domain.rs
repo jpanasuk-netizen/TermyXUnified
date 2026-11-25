@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::repost::{embedded_original, reposted_by_field, split_bare_repost};
 use crate::model::{post_url, strip_handle};
 #[cfg(test)]
 use crate::time::parse_created_at;
@@ -46,10 +47,33 @@ pub struct SourcePost {
     pub lang: String,
     #[serde(default)]
     pub in_reply_to: Option<String>,
+    /// Handle that reposted this post. The card shows the original with a
+    /// "reposted by" line. Never invented: it comes from the row.
+    #[serde(default)]
+    pub reposted_by: Option<String>,
 }
 
 impl SourcePost {
     pub fn from_value(value: &Value) -> Option<Self> {
+        if let Some(original) = embedded_original(value)
+            && let Some(mut post) = Self::from_row(original)
+        {
+            post.reposted_by = Some(author_of(value)).filter(|by| !by.is_empty());
+            return Some(post);
+        }
+        let mut post = Self::from_row(value)?;
+        if let Some((handle, rest)) = split_bare_repost(&post.text) {
+            let by = std::mem::replace(&mut post.author, handle.to_string());
+            post.reposted_by = Some(by).filter(|by| !by.is_empty());
+            post.author_name = String::new();
+            post.text = rest.to_string();
+        } else if let Some(by) = reposted_by_field(value) {
+            post.reposted_by = Some(by);
+        }
+        Some(post)
+    }
+
+    fn from_row(value: &Value) -> Option<Self> {
         let text = first_str(value, &["text", "full_text", "rawContent", "content"])
             .unwrap_or("")
             .trim()
@@ -115,6 +139,7 @@ impl SourcePost {
             )
             .map(str::to_string)
             .filter(|id| !id.is_empty()),
+            reposted_by: None,
         })
     }
 
@@ -133,10 +158,10 @@ impl SourcePost {
     }
 }
 
-struct StatusLink {
-    id: String,
-    author: String,
-    canonical: String,
+pub(super) struct StatusLink {
+    pub(super) id: String,
+    pub(super) author: String,
+    pub(super) canonical: String,
 }
 
 fn normalize_status_link(raw: &str, author: &str, id: &str) -> Option<StatusLink> {
@@ -159,7 +184,7 @@ fn normalize_status_link(raw: &str, author: &str, id: &str) -> Option<StatusLink
     })
 }
 
-fn status_from_url(raw: &str) -> Option<StatusLink> {
+pub(super) fn status_from_url(raw: &str) -> Option<StatusLink> {
     let without_hash = raw.split('#').next().unwrap_or(raw);
     let (base, _query) = without_hash.split_once('?').unwrap_or((without_hash, ""));
     let rest = strip_http_scheme(base)?;
@@ -189,7 +214,7 @@ fn status_from_url(raw: &str) -> Option<StatusLink> {
         (String::new(), digits(id)?)
     } else {
         let status = parts.next()?;
-        if !status.eq_ignore_ascii_case("status") {
+        if !status.eq_ignore_ascii_case("status") && !status.eq_ignore_ascii_case("statuses") {
             return None;
         }
         (strip_handle(first).to_string(), digits(parts.next()?)?)
