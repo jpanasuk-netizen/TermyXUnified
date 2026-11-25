@@ -468,7 +468,7 @@ impl TrendsDesk {
             return self.link_page(width, cx);
         }
         if let Some(page) = self.special_page(cx) {
-            return page;
+            return self.wrap_scroll_page(termy_x::trends_desk::PANE_BOARD, page, cx);
         }
         let Some(column) = self.columns.get(index) else {
             return div().child("No subjects yet.").into_any_element();
@@ -556,11 +556,10 @@ impl TrendsDesk {
                         )
                         .child({
                             let topic_id = column.topic.id.clone();
-                            let mut list = div()
-                                .id("desk-take-list")
+                            let mut list = self
+                                .scroll_pane(termy_x::trends_desk::PANE_FEED, cx)
                                 .flex_1()
                                 .min_h(px(0.0))
-                                .overflow_y_scroll()
                                 .flex()
                                 .flex_row()
                                 .flex_wrap()

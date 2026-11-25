@@ -5,6 +5,7 @@
 //! write a fixture success. Publishing stays on the existing confirm path.
 
 mod agents;
+mod autoscroll;
 mod cards;
 mod carousel;
 mod dankoe;
@@ -40,6 +41,11 @@ pub use agents::{
     reply_prompt, resolve_hermes_key, resolve_launch, seed_agent_block, take_log_line,
     variants_from_draft, vyce_auth, vyce_complete, vyce_direct_auth, vyce_request,
     write_hermes_settings,
+};
+pub use autoscroll::{
+    AutoScroll, DEAD_ZONE, HOLD_MOVE, MARKER_SIZE, PANE_AGENT, PANE_BOARD, PANE_BODY, PANE_FEED,
+    PANE_LINK, PANE_ROOT, SPEED_PER_PX, TICK_MS, WHEEL_LINE_PX, clamp_offset, pane_ids,
+    wheel_delta,
 };
 pub use cards::{
     COMPANION_HEIGHT, COMPANION_WIDTH, DOCK_WIDTH, DRAFTING_PLACEHOLDER, DeskFrame, EditPopout,

@@ -679,10 +679,8 @@ impl TrendsDesk {
                             .child(notice.clone()),
                     )
                     .child(
-                        div()
-                            .id("desk-agent-scroll")
+                        self.scroll_pane(termy_x::trends_desk::PANE_AGENT, cx)
                             .h(px(96.0))
-                            .overflow_y_scroll()
                             .text_size(px(12.0))
                             .whitespace_normal()
                             .child(scroll),

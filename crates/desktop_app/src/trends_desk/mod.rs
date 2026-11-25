@@ -99,6 +99,9 @@ pub struct TrendsDesk {
     pub(crate) selected: Option<String>,
     pub(crate) scroll_offsets: HashMap<String, f32>,
     pub(crate) scroll_handles: HashMap<String, gpui_kit::ScrollHandle>,
+    pub(crate) autoscroll: Option<termy_x::trends_desk::AutoScroll>,
+    pub(crate) autoscroll_ticking: bool,
+    pub(crate) autoscroll_tick_at: Option<Instant>,
     pub(crate) popout: Option<EditPopout>,
     pub(crate) pop_caret: termy_x::draft_edit::DraftCaret,
     pub(crate) pack: termy_x::trends_desk::PackFile,
@@ -283,6 +286,9 @@ impl TrendsDesk {
             selected: None,
             scroll_offsets: HashMap::new(),
             scroll_handles: HashMap::new(),
+            autoscroll: None,
+            autoscroll_ticking: false,
+            autoscroll_tick_at: None,
             popout: None,
             pop_caret: termy_x::draft_edit::DraftCaret::collapsed(0),
             pack,
@@ -686,6 +692,12 @@ impl TrendsDesk {
 
     fn popout_key(&mut self, key: &str, event: &KeyDownEvent, cx: &mut Context<Self>) {
         if self.agent_input && !self.popout.as_ref().is_some_and(|pop| pop.open) {
+            if key == "escape" && self.autoscroll.is_some() {
+                self.stop_autoscroll();
+                cx.stop_propagation();
+                cx.notify();
+                return;
+            }
             if key == "escape" {
                 self.agent_input = false;
                 cx.notify();
@@ -1364,6 +1376,7 @@ impl Render for TrendsDesk {
         }
         self.focus_open_media(window, cx);
         self.ensure_scrolls();
+        self.ensure_pane_scrolls();
         self.maybe_refresh(cx);
         if !self.hosted {
             self.follow_host(window, cx);
@@ -1378,7 +1391,6 @@ impl Render for TrendsDesk {
             window.viewport_size().width.into()
         };
         let mut root = div()
-            .id("trends-desk")
             .track_focus(&self.focus_handle)
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 this.on_key(event, window, cx);
@@ -1397,14 +1409,11 @@ impl Render for TrendsDesk {
                 .child(self.header(per_row, cx))
                 .child(self.nav_bar(cx))
                 .child({
-                    let mut body = div()
-                        .id("trends-desk-body")
+                    let mut body = self
+                        .scroll_pane(termy_x::trends_desk::PANE_BODY, cx)
                         .flex_1()
                         .min_h(px(0.0))
                         .p(px(16.0));
-                    if surface != Surface::Columns {
-                        body = body.overflow_y_scroll();
-                    }
                     body = body
                         .relative()
                         .child(self.reader_bar(cx))
@@ -1433,13 +1442,18 @@ impl Render for TrendsDesk {
         if let Some(close) = self.media_close(cx) {
             root = root.child(close);
         }
-        root
+        if let Some(mark) = self.autoscroll_marker() {
+            root = root.child(mark);
+        }
+        self.wire_autoscroll_root(root, cx)
     }
 }
 
 mod chrome;
 #[path = "../xl_agents.rs"]
 mod xl_agents;
+#[path = "../xl_autoscroll.rs"]
+mod xl_autoscroll;
 #[path = "../xl_loop.rs"]
 mod xl_loop;
 #[path = "../xl_media.rs"]

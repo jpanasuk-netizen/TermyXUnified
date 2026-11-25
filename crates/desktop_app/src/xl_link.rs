@@ -126,10 +126,9 @@ impl TrendsDesk {
     }
 
     pub(crate) fn link_page(&self, width: f32, cx: &mut Context<Self>) -> gpui_kit::AnyElement {
-        let mut page = div()
-            .id("desk-link-page")
+        let mut page = self
+            .scroll_pane(termy_x::trends_desk::PANE_LINK, cx)
             .size_full()
-            .overflow_y_scroll()
             .flex()
             .flex_col()
             .gap(px(8.0))
