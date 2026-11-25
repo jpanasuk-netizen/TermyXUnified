@@ -127,7 +127,7 @@ impl OpenCliDesk {
         if let Err(error) = self.preflight() {
             return outcome_error(topic, focus, error);
         }
-        let args = search_args(&query, 100);
+        let args = search_args_for(&query, 100, &topic.sort);
         match self.run(&args, SEARCH_TIMEOUT, cancel) {
             Err(error) => outcome_error(
                 topic,
@@ -135,7 +135,10 @@ impl OpenCliDesk {
                 shorten(&redact_secrets(&humanize_error(&error))),
             ),
             Ok(stdout) => match posts_from_stdout(&stdout) {
-                Ok(posts) => outcome_from_posts(topic, focus, posts),
+                Ok(posts) => {
+                    let posts = rank_topic_posts(posts, topic, None);
+                    outcome_from_posts(topic, focus, posts)
+                }
                 Err(ParseError::Provider(message) | ParseError::Malformed(message)) => {
                     outcome_error(topic, focus, shorten(&redact_secrets(&message)))
                 }
@@ -151,11 +154,7 @@ impl OpenCliDesk {
             crate::reply_guy::Secret::Treg,
         );
         let Some(token) = treg_key else {
-            return outcome_error(
-                topic,
-                focus,
-                "Treg key not found. Set TERMY_X_TREG_TOKEN or TREG_TOKEN.",
-            );
+            return outcome_error(topic, focus, super::treg_missing_key_message());
         };
         if cancel.load(Ordering::Relaxed) {
             return outcome_error(topic, focus, "cancelled");
@@ -165,9 +164,9 @@ impl OpenCliDesk {
         } else {
             crate::reply_guy::Sort::Newest
         };
-        match crate::reply_guy::fetch_posts(&http, &token, &query, sort, 50) {
+        match crate::reply_guy::fetch_posts(&http, &token, &query, sort, super::TREG_DESK_LIMIT) {
             Ok(fetched) => {
-                let posts: Vec<SourcePost> = fetched
+                let mut posts: Vec<SourcePost> = fetched
                     .posts
                     .into_iter()
                     .map(|post| {
@@ -198,6 +197,7 @@ impl OpenCliDesk {
                         }
                     })
                     .collect();
+                let posts = rank_topic_posts(posts, topic, Some(super::TREG_DESK_LIMIT));
                 outcome_from_posts(topic, focus, posts)
             }
             Err(error) => outcome_error(topic, focus, format!("Treg search failed: {error}")),
@@ -463,18 +463,31 @@ pub fn engage_opencli(
 }
 
 pub fn search_args(query: &str, limit: usize) -> Vec<String> {
+    search_args_for(query, limit, "popular")
+}
+
+/// Same OpenCLI search the desk already uses. `popular` asks for Top posts;
+/// `newest` asks for Latest. The query and flags are otherwise unchanged.
+pub fn search_args_for(query: &str, limit: usize, sort: &str) -> Vec<String> {
     let query = argv_text(query);
+    let product = if sort == "newest" { "latest" } else { "top" };
     vec![
         "twitter".into(),
         "search".into(),
         query,
         "--product".into(),
-        "top".into(),
+        product.into(),
         "--limit".into(),
         limit.clamp(1, 100).to_string(),
         "-f".into(),
         "json".into(),
     ]
+}
+
+fn rank_topic_posts(posts: Vec<SourcePost>, topic: &Topic, cap: Option<usize>) -> Vec<SourcePost> {
+    super::rank_fetched_posts(posts, &topic.sort, cap, |post| {
+        super::engagement_score(post.likes, post.reposts, post.replies)
+    })
 }
 
 pub fn thread_args(id: &str) -> Vec<String> {
@@ -837,6 +850,14 @@ mod tests {
         assert!(wide.iter().any(|arg| arg == "100"));
         assert_eq!(args[2], "law; rm -rf /");
         assert_eq!(args.iter().filter(|arg| *arg == "law; rm -rf /").count(), 1);
+        let top = search_args_for("ai", 20, "popular");
+        let latest = search_args_for("ai", 20, "newest");
+        assert!(top.windows(2).any(|pair| pair == ["--product", "top"]));
+        assert!(
+            latest
+                .windows(2)
+                .any(|pair| pair == ["--product", "latest"])
+        );
     }
 
     #[test]

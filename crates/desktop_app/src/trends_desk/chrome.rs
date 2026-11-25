@@ -319,7 +319,9 @@ impl TrendsDesk {
                             this.run_live_search(cx);
                             cx.notify();
                         }),
-                    )),
+                    ))
+                    .child(self.viral_nav_button(cx))
+                    .child(self.treg_nav_button(cx)),
             )
             .into_any_element()
     }

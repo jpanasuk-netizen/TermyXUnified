@@ -360,7 +360,7 @@ pub fn default_search_source() -> String {
     "opencli".into()
 }
 pub fn default_sort() -> String {
-    "newest".into()
+    "popular".into()
 }
 
 impl Topic {

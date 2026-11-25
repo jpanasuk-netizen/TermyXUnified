@@ -57,7 +57,7 @@ impl Secret {
     fn env_vars(self) -> &'static [&'static str] {
         match self {
             Self::Grok => &["TERMY_X_GROK_API_KEY", "XAI_API_KEY"],
-            Self::Treg => &["TERMY_X_TREG_TOKEN", "TREG_TOKEN"],
+            Self::Treg => &["TERMY_X_TREG_TOKEN", "TREG_TOKEN", "TREG_API_KEY"],
         }
     }
     pub fn label(self) -> &'static str {
@@ -591,5 +591,10 @@ mod tests {
     fn cost_label_prefers_reported_charge() {
         assert!(cost_label(Some(0.0004), TREG_SEARCH_COST_USD).contains("charged"));
         assert!(cost_label(None, TREG_SEARCH_COST_USD).contains("est."));
+    }
+
+    #[test]
+    fn treg_accepts_the_treg_api_key_env_name() {
+        assert!(Secret::Treg.env_vars().contains(&"TREG_API_KEY"));
     }
 }

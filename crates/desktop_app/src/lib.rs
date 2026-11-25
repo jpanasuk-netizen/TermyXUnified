@@ -14,3 +14,4 @@ mod xl_instance;
 mod xl_pack;
 mod xl_popout;
 mod xl_reply_text;
+mod xl_take_history;

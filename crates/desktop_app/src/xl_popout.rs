@@ -225,6 +225,7 @@ impl TrendsDesk {
             .children((!self.take_banner.is_empty()).then(|| self.failure_banner(cx)))
             .children(generating.then(|| self.cancel_row(cx)))
             .child(editor)
+            .child(self.take_history_row(cx))
             .child(bottom);
         Some(box_el.into_any_element())
     }
@@ -999,6 +1000,27 @@ impl TrendsDesk {
         let Some(id) = self.popout.as_ref().map(|pop| pop.card_id.clone()) else {
             return;
         };
+        let current = self
+            .reply_edit
+            .as_ref()
+            .map(|editor| editor.text.clone())
+            .or_else(|| self.popout.as_ref().map(|pop| pop.draft.clone()))
+            .unwrap_or_default();
+        let tone = self
+            .popout
+            .as_ref()
+            .map(|pop| pop.tone.clone())
+            .unwrap_or_default();
+        let provider = termy_x::trends_desk::provider_label(&self.settings.take_provider);
+        let placeholder = termy_x::trends_desk::begin_tone_replace(
+            &mut self.pack,
+            &id,
+            &current,
+            &provider,
+            &tone,
+        );
+        self.save_pack_file();
+        self.show_inline_editor(&id, &placeholder);
         self.more_take = true;
         self.take_generating = true;
         self.take_started = Some(std::time::Instant::now());

@@ -611,6 +611,97 @@ impl TrendsDesk {
             .children(rows)
             .into_any_element()
     }
+
+    fn subject_column_index(&self) -> Option<usize> {
+        self.columns
+            .iter()
+            .position(|column| column.topic.id == self.settings.subject_id)
+            .or_else(|| (!self.columns.is_empty()).then_some(0))
+    }
+
+    pub(crate) fn viral_is_active(&self) -> bool {
+        self.subject_column_index()
+            .is_some_and(|index| self.columns[index].topic.sort == "popular")
+    }
+
+    pub(crate) fn treg_is_active(&self) -> bool {
+        self.subject_column_index()
+            .is_some_and(|index| self.columns[index].topic.search_source == "treg")
+    }
+
+    pub(crate) fn viral_nav_button(&self, cx: &mut Context<Self>) -> gpui_kit::AnyElement {
+        let active = self.viral_is_active();
+        button(
+            "desk-viral-search",
+            if active { "Viral ✓" } else { "Viral" },
+            active,
+            cx.listener(|this, _, _, cx| {
+                this.run_viral_search(cx);
+                cx.notify();
+            }),
+        )
+    }
+
+    pub(crate) fn treg_nav_button(&self, cx: &mut Context<Self>) -> gpui_kit::AnyElement {
+        let active = self.treg_is_active();
+        button(
+            "desk-treg-source",
+            if active { "Treg ✓" } else { "Treg" },
+            active,
+            cx.listener(|this, _, _, cx| {
+                this.toggle_treg_source(cx);
+                cx.notify();
+            }),
+        )
+    }
+
+    /// Fetch the current subject's most engaged posts through the desk's
+    /// existing search (OpenCLI by default), then rank what could go viral.
+    /// Does not switch to Treg.
+    pub(crate) fn run_viral_search(&mut self, cx: &mut Context<Self>) {
+        let Some(index) = self.subject_column_index() else {
+            self.action_note = "Add a subject column first.".into();
+            return;
+        };
+        termy_x::trends_desk::apply_viral_sort(&mut self.columns[index].topic.sort);
+        let topic_id = self.columns[index].topic.id.clone();
+        let source = if self.columns[index].topic.search_source == "treg" {
+            "Treg"
+        } else {
+            "OpenCLI"
+        };
+        self.persist_topics();
+        self.surface = termy_x::trends_desk::Surface::Columns;
+        self.action_note = format!(
+            "{source} · most engaged posts for this topic, ranked for what could go viral."
+        );
+        self.start_run(std::slice::from_ref(&topic_id), cx);
+    }
+
+    /// Optional Treg provider for the current topic's existing query.
+    /// A missing or rejected key is shown as an error; nothing is invented.
+    /// Switching back uses the free OpenCLI path.
+    pub(crate) fn toggle_treg_source(&mut self, cx: &mut Context<Self>) {
+        let Some(index) = self.subject_column_index() else {
+            self.action_note = "Add a subject column first.".into();
+            return;
+        };
+        let using_treg = self.columns[index].topic.search_source == "treg";
+        self.columns[index].topic.search_source = if using_treg {
+            "opencli".into()
+        } else {
+            "treg".into()
+        };
+        let topic_id = self.columns[index].topic.id.clone();
+        self.persist_topics();
+        self.surface = termy_x::trends_desk::Surface::Columns;
+        self.action_note = if using_treg {
+            "OpenCLI · free Trends Desk search.".into()
+        } else {
+            "Treg · optional provider for this topic. If the key is missing or rejected, you will see an error. Nothing is invented.".into()
+        };
+        self.start_run(std::slice::from_ref(&topic_id), cx);
+    }
 }
 
 fn sort_toggle(
@@ -676,19 +767,18 @@ fn source_toggle(
     } else {
         "treg"
     };
-    let label = if current_source == "treg" {
-        "Switch to OpenCLI"
-    } else {
-        "Switch to Treg"
-    };
+    let is_treg = current_source == "treg";
+    let label = if is_treg { "OpenCLI" } else { "Treg" };
     button(
         format!("desk-source-toggle-{column_index}"),
         label,
-        false,
+        is_treg,
         cx.listener(move |this, _, _, cx| {
             if let Some(column) = this.columns.get_mut(column_index) {
                 column.topic.search_source = next_source.to_string();
-                this.save_pack_file();
+                let topic_id = column.topic.id.clone();
+                this.persist_topics();
+                this.start_run(std::slice::from_ref(&topic_id), cx);
             }
             cx.stop_propagation();
             cx.notify();

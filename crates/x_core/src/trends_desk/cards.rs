@@ -460,7 +460,7 @@ pub fn editor_on_draft_click(card_id: &str, provider: TakeProvider) -> EditPopou
     open_editor(card_id, DRAFTING_PLACEHOLDER, provider)
 }
 
-fn reply_is_status(text: &str) -> bool {
+pub(crate) fn reply_is_status(text: &str) -> bool {
     let trimmed = text.trim();
     trimmed.is_empty()
         || trimmed == DRAFTING_PLACEHOLDER

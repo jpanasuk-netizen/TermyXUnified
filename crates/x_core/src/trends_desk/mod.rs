@@ -21,6 +21,7 @@ mod parse;
 mod retry;
 mod snap;
 mod store;
+mod take_hist;
 mod takes;
 
 pub use agents::{
@@ -117,6 +118,11 @@ pub use snap::{
 pub use store::{
     DATA_DIR_ENV, DATA_FOLDER, DIR_NAME, DeskStore, drafts_file, termy_xl_data_root,
     within_termy_x_config,
+};
+pub use take_hist::{
+    TAKE_HISTORY_MAX, TREG_DESK_LIMIT, apply_viral_sort, begin_tone_replace, engagement_score,
+    rank_fetched_posts, restore_saved_take, take_should_be_archived, takes_for_card,
+    text_after_tone_take, treg_missing_key_message,
 };
 pub use takes::{
     CLICK_TO_DRAFT, DeskEvent, GROK_TAKE_TIMEOUT, HERMES_TAKE_TIMEOUT, HONEST_PREFIX, PROBE_PROMPT,
