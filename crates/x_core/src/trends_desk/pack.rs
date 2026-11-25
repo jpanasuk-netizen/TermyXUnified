@@ -681,6 +681,7 @@ pub fn format_clock(unix: i64, offset_secs: i32) -> String {
 
 pub fn hud_line(
     sent_today: usize,
+    sent_total: usize,
     drafts: usize,
     provider: &str,
     last_refresh: Option<i64>,
@@ -688,7 +689,9 @@ pub fn hud_line(
 ) -> String {
     let refresh =
         last_refresh.map_or_else(|| "never".to_string(), |at| format_clock(at, offset_secs));
-    format!("{sent_today} sent today · {drafts} drafts · {provider} · refresh {refresh}")
+    format!(
+        "{sent_today} sent today · {sent_total} total · {drafts} drafts · {provider} · refresh {refresh}"
+    )
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1261,8 +1264,8 @@ mod tests {
             "a search already in flight is not started again"
         );
         assert_eq!(new_ids(&["a".into()], &["a".into(), "b".into()]).len(), 1);
-        let line = hud_line(2, 1, "free", None, 0);
-        let stamped = hud_line(0, 0, "free", Some(1_794_432_658), 0);
+        let line = hud_line(2, 5, 1, "free", None, 0);
+        let stamped = hud_line(0, 14, 0, "free", Some(1_794_432_658), 0);
         assert!(!stamped.contains("1794432658"));
         assert!(stamped.contains(':'));
         let utc_2150 = 86_400 + 21 * 3600 + 50 * 60;
@@ -1277,8 +1280,12 @@ mod tests {
         let older = format_post_time(raw, posted + 50 * 3600, -6 * 3600);
         assert!(older.contains("10:32 AM"), "{older}");
         assert!(!older.contains("+0000"));
-        assert!(line.contains("2 sent"));
+        assert!(line.contains("2 sent today"));
+        assert!(line.contains("5 total"));
+        assert!(line.contains("1 drafts"));
         assert!(line.contains("free"));
+        assert!(stamped.contains("0 sent today"));
+        assert!(stamped.contains("14 total"));
     }
 
     #[test]

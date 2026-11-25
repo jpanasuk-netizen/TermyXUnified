@@ -19,6 +19,7 @@ mod media;
 mod pack;
 mod parse;
 mod retry;
+mod sent;
 mod snap;
 mod store;
 mod take_hist;
@@ -113,6 +114,7 @@ pub use retry::{
     RETRY_BACKOFF, VYCE_RETRYING, bind_retry_notice, flatten_error, is_retryable, retry_result,
     vyce_busy_line,
 };
+pub use sent::{chicago_offset_secs, chicago_ymd, sent_today_and_total};
 pub use snap::{
     SeenWindow, Snap, SnapSource, WindowRect, WriteGate, XlArea, area_gate, attach_plan,
     clamp_outer, is_termy_x_title, pick_termy_host, snap_beside, snap_tracked, termy_areas,

@@ -50,16 +50,13 @@ impl TrendsDesk {
     }
 
     pub(crate) fn hud(&self) -> String {
-        let sent = self
-            .pack
-            .receipts
-            .iter()
-            .filter(|mark| mark.status == "confirmed")
-            .count();
+        let (sent_today, sent_total) =
+            termy_x::trends_desk::sent_today_and_total(&self.pack.receipts, Self::now_unix());
         let drafts =
             termy_x::drafts::load_drafts(&termy_x::trends_desk::drafts_file(&self.data_root)).len();
         let line = hud_line(
-            sent,
+            sent_today,
+            sent_total,
             drafts,
             &self.settings.take_provider,
             self.pack.last_refresh,
