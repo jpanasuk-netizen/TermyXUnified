@@ -56,6 +56,7 @@ impl TrendsDesk {
             termy_x::drafts::load_drafts(&termy_x::trends_desk::drafts_file(&self.data_root)).len();
         let line = hud_line(
             sent_today,
+            self.pack.reply_goal,
             sent_total,
             drafts,
             &self.settings.take_provider,
@@ -221,6 +222,13 @@ impl TrendsDesk {
             ("hits".into(), "Hit List".into()),
             ("receipts".into(), "Receipts".into()),
             ("heat".into(), "Sort by heat".into()),
+            (
+                "goal".into(),
+                format!(
+                    "Daily reply goal: {} (click to change)",
+                    termy_x::trends_desk::reply_goal_or_default(self.pack.reply_goal)
+                ),
+            ),
             ("termy".into(), "Termy areas".into()),
         ];
         for column in &self.columns {
@@ -274,6 +282,11 @@ impl TrendsDesk {
                 "termy" => self.board = "termy".into(),
                 "heat" => {
                     self.pack.sort_heat = !self.pack.sort_heat;
+                    self.save_pack_file();
+                }
+                "goal" => {
+                    self.pack.reply_goal =
+                        termy_x::trends_desk::next_reply_goal(self.pack.reply_goal);
                     self.save_pack_file();
                 }
                 _ => {}

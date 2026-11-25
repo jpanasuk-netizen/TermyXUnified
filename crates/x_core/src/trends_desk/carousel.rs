@@ -117,7 +117,8 @@ pub fn cli_take_prompt(author: &str, tweet: &str, tone: &str) -> String {
         })
         .unwrap_or_else(|| " ".into());
     let head = format!(
-        "Tone {tone}. {guide}{briefing}{hook}One X reply under 280 characters. Reply text only. No tools. @{author}: "
+        "Tone {tone}. {guide} {}{briefing}{hook}One X reply under 280 characters. Reply text only. No tools. @{author}: ",
+        super::growth::GOLDEN_REPLY_RULES
     );
     let room = CLI_TAKE_PROMPT_MAX.saturating_sub(head.chars().count());
     let tweet: String = tweet

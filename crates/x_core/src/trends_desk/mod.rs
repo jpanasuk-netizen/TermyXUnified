@@ -12,6 +12,7 @@ mod desk_cmd;
 mod domain;
 mod fetch;
 mod grok_take;
+mod growth;
 mod hermes_draft;
 mod lifecycle;
 mod log;
@@ -77,6 +78,11 @@ pub use fetch::{
 pub use grok_take::{
     GrokModel, bind_grok_model, bind_grok_stream, parse_grok_models, refresh_grok_models,
     run_grok_prompt, take_cleared_grok_model,
+};
+pub use growth::{
+    DEFAULT_REPLY_GOAL, GOLDEN_REPLY_RULES, QUESTION_TONE, REPLY_GOAL_CHOICES, SHORT_POST_WORDS,
+    invites_an_answer, next_reply_goal, opener_report, reply_goal_line, reply_goal_or_default,
+    word_count,
 };
 pub use hermes_draft::{hermes_plain_prompt, hermes_take, hermes_take_toned};
 pub use lifecycle::{

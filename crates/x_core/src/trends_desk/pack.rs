@@ -20,10 +20,11 @@ pub enum TakeTone {
     Contrarian,
     Supportive,
     Hype,
+    Question,
 }
 
 impl TakeTone {
-    pub fn all() -> [Self; 6] {
+    pub fn all() -> [Self; 7] {
         [
             Self::Spicy,
             Self::Funny,
@@ -31,6 +32,7 @@ impl TakeTone {
             Self::Contrarian,
             Self::Supportive,
             Self::Hype,
+            Self::Question,
         ]
     }
 
@@ -41,6 +43,7 @@ impl TakeTone {
             "contrarian" => Self::Contrarian,
             "supportive" => Self::Supportive,
             "hype" => Self::Hype,
+            "question" | "ask" => Self::Question,
             _ => Self::Spicy,
         }
     }
@@ -53,13 +56,19 @@ impl TakeTone {
             Self::Contrarian => "Contrarian",
             Self::Supportive => "Supportive",
             Self::Hype => "Hype",
+            Self::Question => "Question",
         }
     }
 }
 
 /// The three chips in the card's reply panel. Data is shown as Smart.
-pub fn panel_tones() -> [TakeTone; 3] {
-    [TakeTone::Funny, TakeTone::Data, TakeTone::Spicy]
+pub fn panel_tones() -> [TakeTone; 4] {
+    [
+        TakeTone::Funny,
+        TakeTone::Data,
+        TakeTone::Spicy,
+        TakeTone::Question,
+    ]
 }
 
 pub fn panel_tone_name(tone: TakeTone) -> &'static str {
@@ -440,6 +449,9 @@ pub struct PackFile {
     /// Parent status URL to the author's handle, without the @.
     #[serde(default)]
     pub authors: HashMap<String, String>,
+    /// Daily reply goal shown on the HUD (Pascio: 20 useful replies a day).
+    #[serde(default = "default_reply_goal")]
+    pub reply_goal: u32,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -458,6 +470,9 @@ fn default_true() -> bool {
 fn default_refresh_minutes() -> u64 {
     10
 }
+fn default_reply_goal() -> u32 {
+    super::growth::DEFAULT_REPLY_GOAL
+}
 
 impl Default for PackFile {
     fn default() -> Self {
@@ -473,6 +488,7 @@ impl Default for PackFile {
             seen: HashMap::new(),
             takes: HashMap::new(),
             authors: HashMap::new(),
+            reply_goal: default_reply_goal(),
         }
     }
 }
@@ -681,6 +697,7 @@ pub fn format_clock(unix: i64, offset_secs: i32) -> String {
 
 pub fn hud_line(
     sent_today: usize,
+    reply_goal: u32,
     sent_total: usize,
     drafts: usize,
     provider: &str,
@@ -690,7 +707,8 @@ pub fn hud_line(
     let refresh =
         last_refresh.map_or_else(|| "never".to_string(), |at| format_clock(at, offset_secs));
     format!(
-        "{sent_today} sent today · {sent_total} total · {drafts} drafts · {provider} · refresh {refresh}"
+        "{} · {sent_total} total · {drafts} drafts · {provider} · refresh {refresh}",
+        super::growth::reply_goal_line(sent_today, reply_goal)
     )
 }
 
@@ -1063,7 +1081,9 @@ mod tests {
         assert_eq!(flip_variant(2, 1, 3), 0);
         assert_eq!(flip_variant(0, -1, 3), 2);
         let names: Vec<_> = panel_tones().into_iter().map(panel_tone_name).collect();
-        assert_eq!(names, vec!["Funny", "Smart", "Spicy"]);
+        assert_eq!(names, vec!["Funny", "Smart", "Spicy", "Question"]);
+        assert_eq!(TakeTone::parse("question"), TakeTone::Question);
+        assert_eq!(next_tone("Hype"), TakeTone::Question);
         assert_eq!(TakeTone::parse("smart"), TakeTone::Data);
         assert_eq!(panel_tone_name(TakeTone::parse("Smart")), "Smart");
         assert_eq!(next_tone("Spicy"), TakeTone::Funny);
@@ -1264,8 +1284,8 @@ mod tests {
             "a search already in flight is not started again"
         );
         assert_eq!(new_ids(&["a".into()], &["a".into(), "b".into()]).len(), 1);
-        let line = hud_line(2, 5, 1, "free", None, 0);
-        let stamped = hud_line(0, 14, 0, "free", Some(1_794_432_658), 0);
+        let line = hud_line(2, 20, 5, 1, "free", None, 0);
+        let stamped = hud_line(0, 20, 14, 0, "free", Some(1_794_432_658), 0);
         assert!(!stamped.contains("1794432658"));
         assert!(stamped.contains(':'));
         let utc_2150 = 86_400 + 21 * 3600 + 50 * 60;
@@ -1280,11 +1300,11 @@ mod tests {
         let older = format_post_time(raw, posted + 50 * 3600, -6 * 3600);
         assert!(older.contains("10:32 AM"), "{older}");
         assert!(!older.contains("+0000"));
-        assert!(line.contains("2 sent today"));
+        assert!(line.contains("2 / 20 sent today"));
         assert!(line.contains("5 total"));
         assert!(line.contains("1 drafts"));
         assert!(line.contains("free"));
-        assert!(stamped.contains("0 sent today"));
+        assert!(stamped.contains("0 / 20 sent today"));
         assert!(stamped.contains("14 total"));
     }
 

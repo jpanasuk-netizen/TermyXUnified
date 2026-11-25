@@ -12,7 +12,7 @@ use gpui_kit::{
 };
 use termy_x::trends_desk::{
     ContentMap, MapPick, SourcePost, VaultEntry, ViralFlag, ViralVault, hook_check,
-    hook_pattern_report, load_content_map, load_vault, map_draft, parse_ai_reasons,
+    hook_pattern_report, load_content_map, load_vault, map_draft, opener_report, parse_ai_reasons,
     save_content_map, save_vault, vault_reasons_prompt, viral_flags, within_termy_x_config,
 };
 
@@ -391,6 +391,7 @@ impl TrendsDesk {
             .child(muted(check.marks()))
             .children(tip.map(muted))
             .child(muted(hook_note))
+            .child(muted(opener_report(text)))
             .child(button(
                 SharedString::from(format!("desk-draft-tag-{id}")),
                 format!("Map: {tag} ▸"),

@@ -264,6 +264,7 @@ pub fn tone_instruction(tone: &str) -> &'static str {
         "supportive" => "Supportive means warm and specific. No generic praise and no 'so true'.",
         "hype" => "Hype means energetic, still tied to a detail in the post, not empty excitement.",
         "contrarian" => "Lead with the disagreement. Make the objection specific to this post.",
+        "question" | "ask" => super::growth::QUESTION_TONE,
         _ => "Match the named tone in word choice and attitude, using details from the post.",
     }
 }
@@ -273,6 +274,7 @@ pub fn reply_prompt(author: &str, tweet: &str, tone: &str) -> String {
         "Tone: {tone}\n{}\nAuthor: @{author}\nPost:\n{tweet}\n\nWrite exactly 3 replies a person would post on X. They must differ in approach and voice:\n(a) a sharp witty or funny one-liner that is actually funny\n(b) a smart add-on with a concrete fact or angle drawn from the tweet itself\n(c) a bold contrarian or spicy take\nEach one under 280 characters. Casual human voice. Do not start with Agree, Question:, or Contrarian:. Use specifics from the post. No generic filler, no hashtags, no emoji spam. Separate them with a line containing only ---. Output only the 3 replies.",
         tone_instruction(tone),
     );
+    let prompt = format!("{prompt}\n{}", super::growth::GOLDEN_REPLY_RULES);
     let prompt = match super::take_steer::active_analysis_block() {
         Some(briefing) => format!("{prompt}\n{briefing}"),
         None => prompt,

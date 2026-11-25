@@ -590,6 +590,10 @@ pub fn bind_take_hook_for_post(
     preferred: &[u8],
     chosen: Option<u8>,
 ) -> (HookGuard, Option<String>) {
+    // The question tone stays short (under 15 words), so no hook opener.
+    if tone.trim().eq_ignore_ascii_case("question") {
+        return (bind_take_hook(None), None);
+    }
     let picks = recommend_hooks(tone, post_text, preferred);
     let hook = resolve_hook(tone, post_text, preferred, chosen);
     let msg = hook.map(|id| hook_picks_msg(id, &picks));
@@ -685,6 +689,10 @@ mod tests {
         assert_eq!(next_hook_id(Some(21), &[21, 43, 4]), Some(43));
         assert_eq!(next_hook_id(Some(4), &[21, 43, 4]), Some(21));
         assert_eq!(resolve_hook("spicy", "x", &[21, 43], Some(43)), Some(43));
+        let (_guard, msg) = bind_take_hook_for_post("Question", "x", &[21], Some(21));
+        assert!(msg.is_none());
+        assert!(active_take_hook().is_none());
+        drop(_guard);
         assert_eq!(resolve_hook("spicy", "x", &[21, 43], None), Some(21));
         assert_eq!(
             parse_hook_picks_msg(&hook_picks_msg(21, &[21, 43, 4])),
